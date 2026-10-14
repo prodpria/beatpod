@@ -1281,10 +1281,10 @@ function frame(now){
   if (mode === "intro"){
     // opening animation: the pod spins in from small and lands locked in, facing you
     intro.t += dt;
-    const k = Math.max(0, Math.min(1, intro.t / intro.dur)), e = 1 - Math.pow(1 - k, 3);
-    const back = k < 1 ? 1 + 0.08 * Math.sin(k * Math.PI) : 1;              // tiny overshoot on the way in
-    dev.quaternion.setFromEuler(new THREE.Euler((1 - e) * 0.45, (1 - e) * Math.PI * 4.5, (1 - e) * -0.25));
-    rig.scale.setScalar((0.25 + 0.75 * e) * (k > 0.6 ? back : 1));
+    const k = Math.max(0, Math.min(1, intro.t / intro.dur));
+    const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;   // smooth start and smooth landing
+    dev.quaternion.setFromEuler(new THREE.Euler((1 - e) * 0.18, (1 - e) * Math.PI * 2, 0));
+    rig.scale.setScalar(0.85 + 0.15 * e);
     if (k >= 1){ rig.scale.setScalar(1); mode = "locked"; setLockUI(); }
   } else if (mode === "free"){
     if (!drag){
@@ -1320,11 +1320,13 @@ addEventListener("pointermove", e => { tiltX = (e.clientX / innerWidth - .5) * 2
 
 /* ---------- start ---------- */
 dev.quaternion.setFromEuler(new THREE.Euler(0.15, Math.PI * 0.85, 0.05));
-const intro = { t: -0.35, dur: 1.9 };           // brief pause while the loading screen fades
+const intro = { t: -0.45, dur: 1.6 };           // brief pause while the loading screen fades
 if (reduceMotion){ dev.quaternion.identity(); mode = "locked"; }
-else { mode = "intro"; rig.scale.setScalar(0.25); dev.quaternion.setFromEuler(new THREE.Euler(0.45, Math.PI * 4.5, -0.25)); }
+else { mode = "intro"; rig.scale.setScalar(0.85); dev.quaternion.setFromEuler(new THREE.Euler(0.18, Math.PI * 2, 0)); }
 drawLCD(); syncCard(); setLockUI(); resize();
+try { renderer.compile(scene, camera); renderer.render(scene, camera); } catch(e) {}
 $("#loading").style.opacity = 0; setTimeout(() => $("#loading").remove(), 600);
+last = performance.now();
 requestAnimationFrame(frame);
 })();
 </script>
