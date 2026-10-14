@@ -120,14 +120,18 @@ const STORE = {
   instagram: "@prodpria",
 
   leasePrice: 45,                       // every beat lease costs this
-  deal: { count: 3, price: 99 },        // automatic deal: any 3 beats for $99
+  deal: { count: 3, price: 120 },       // automatic deal: any 3 beats for $120
 
   // Stripe Payment Links (optional). Make one link per cart size:
-  //   1 beat = $45, 2 beats = $90, 3 beats = $99
+  //   1 beat = $45, 2 beats = $90, 3 beats = $120
   // Leave them "" and checkout sends you an order email instead.
-  checkout: { 1: "", 2: "", 3: "" },
+  checkout: {
+    1: "https://buy.stripe.com/test_fZuaEXdj27Di7mvaRK9ws00",   // 1 beat  $45
+    2: "https://buy.stripe.com/test_5kQ4gz4Mw8HmayH9NG9ws01",   // 2 beats $90
+    3: "https://buy.stripe.com/test_7sY28r3Is0aQ5en1ha9ws02",   // 3-beat deal $120
+  },
 
-  licensing: "Lease ($45): MP3 + WAV, non-exclusive.\nAny 3 beats: $99, applied automatically.\nExclusive: full ownership. Contact for a price.\nCredit: prod. PRIA on every release."
+  licensing: "Lease ($45): MP3 + WAV, non-exclusive.\nAny 3 beats: $120, applied automatically.\nExclusive: full ownership. Contact for a price.\nCredit: prod. PRIA on every release."
 };
 
 /* ---------- YOUR BEATS ----------
