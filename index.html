@@ -1,0 +1,1248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PRIA Beat Store</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ffffff; --ink:#151515; --muted:#76726c; --line:#e6e3df; --soft:#f5f4f2; --amber:#2f6bff;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+:root[data-theme="dark"]{ --bg:#000000; --ink:#f2f2f2; --muted:#9a968f; --line:#2a2a2a; --soft:#141414; color-scheme:dark; }
+:root[data-theme="dark"] .brand img{filter:none}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Archivo",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
+#stage{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab;outline:none}
+#stage.grabbing{cursor:grabbing}
+#stage.locked{cursor:default}
+
+header{position:fixed;top:env(safe-area-inset-top,0px);left:0;right:0;display:flex;align-items:center;justify-content:space-between;
+  padding:20px clamp(16px,4vw,40px);pointer-events:none;z-index:2}
+header > *{pointer-events:auto}
+.brand{display:flex;align-items:baseline;gap:12px}
+.brand img{height:30px;width:auto;filter:invert(1);display:block}
+.brand span{font-variation-settings:"wdth" 112;font-weight:600;font-size:14px;color:var(--muted)}
+#lockBtn,#themeBtn{font:inherit;font-size:14px;font-weight:600;padding:10px 16px;border-radius:999px;border:1.5px solid var(--ink);
+  background:var(--bg);color:var(--ink);cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.actions{display:flex;gap:8px;align-items:center}
+#themeBtn svg{width:14px;height:14px}
+#lockBtn i{width:8px;height:8px;border-radius:50%;background:#c9c5bf;display:inline-block}
+#lockBtn.on{background:var(--ink);color:var(--bg)}
+#lockBtn.on i{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+#lockBtn:focus-visible,#themeBtn:focus-visible,.lic:focus-visible,#cardPlay:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+
+#hint{position:fixed;left:0;right:0;text-align:center;font-size:13px;color:var(--muted);pointer-events:none;z-index:2;padding:0 16px;transition:opacity .4s}
+
+#card{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));
+  width:min(760px,calc(100% - 24px));background:var(--bg);border:1px solid var(--line);border-radius:18px;
+  padding:14px;display:grid;grid-template-columns:auto 1fr;gap:12px 14px;align-items:center;z-index:3;
+  box-shadow:0 18px 40px -24px rgba(20,20,20,.35)}
+#cardPlay{width:52px;height:52px;border-radius:12px;border:0;background:var(--ink);color:var(--bg);cursor:pointer;display:grid;place-items:center}
+#cardPlay svg{width:18px;height:18px}
+.ttl h2{margin:0;font-size:22px;line-height:1.1;font-weight:800;font-variation-settings:"wdth" 118;letter-spacing:-.01em}
+.ttl p{margin:4px 0 0;font-size:13px;color:var(--muted)}
+#lics{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.lic{font:inherit;text-align:left;min-width:0;display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--soft);
+  color:var(--ink);text-decoration:none;font-size:12.5px;cursor:pointer;transition:background .15s,color .15s,border-color .15s}
+.lic b{font-size:18px;font-weight:800;font-variation-settings:"wdth" 108}
+.lic:hover,.lic.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.lic.off{opacity:.5;cursor:not-allowed}
+.lic.off:hover{background:var(--soft);color:var(--ink);border-color:var(--line)}
+.lic small{font-size:11px;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lic:disabled{cursor:not-allowed}
+
+#toast{position:fixed;left:50%;top:calc(80px + env(safe-area-inset-top,0px));transform:translate(-50%,-10px);opacity:0;
+  background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;z-index:5;transition:opacity .25s,transform .25s;max-width:calc(100% - 32px)}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+#toast a{color:var(--amber)}
+
+#loading{position:fixed;inset:0;display:grid;place-items:center;font-size:14px;color:var(--muted);z-index:4;background:var(--bg);transition:opacity .5s}
+
+@media (max-width:620px){
+  .brand span{display:none}
+  #card{padding:10px;gap:8px 10px;border-radius:14px;bottom:calc(10px + env(safe-area-inset-bottom,0px));width:calc(100% - 20px)}
+  #cardPlay{width:40px;height:40px;border-radius:10px}
+  #cardPlay svg{width:15px;height:15px}
+  .ttl h2{font-size:17px}
+  .ttl p{font-size:12px;margin-top:2px}
+  #lics{grid-template-columns:repeat(3,1fr);gap:6px}
+  .lic{padding:6px 8px;border-radius:8px;font-size:11px;gap:0}
+  .lic b{font-size:14px}
+  .lic small{font-size:10px}
+  #hint{font-size:12px}
+}
+</style>
+</head>
+<body>
+<canvas id="stage" tabindex="0" aria-label="3D beat player. Drag to spin. Arrow keys scroll, Enter selects, Escape goes back, Space plays."></canvas>
+
+<header>
+  <div class="brand"><img id="brandLogo" alt="PRIA"><span>Beat store</span></div>
+  <div class="actions">
+    <button id="themeBtn" type="button" aria-pressed="false"><span>Dark</span></button>
+    <button id="lockBtn" type="button"><i></i><span>Lock in</span></button>
+  </div>
+</header>
+
+<p id="hint">Drag to spin it. Let go while it faces you and it locks in.</p>
+
+<section id="card" aria-live="polite">
+  <button id="cardPlay" type="button" aria-label="Play preview"></button>
+  <div class="ttl"><h2 id="cardTitle">Loading</h2><p id="cardMeta"></p></div>
+  <div id="lics"></div>
+</section>
+
+<div id="toast" role="status"></div>
+<div id="loading">Warming up the player</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* =====================================================================
+   YOUR STORE — this is the only part you need to edit
+   ===================================================================== */
+const STORE = {
+  artist: "PRIA",
+  email: "contact@prodpria.com",      // where orders + exclusive offers go
+  website: "https://www.prodpria.com",
+
+  // Your GitHub repository, like "yourname/beatpod". On a github.io link this
+  // is found automatically, so you only need it if you use your own domain.
+  github: "",
+  instagram: "@pria",
+
+  leasePrice: 45,                       // every beat lease costs this
+  deal: { count: 3, price: 99 },        // automatic deal: any 3 beats for $99
+
+  // Stripe Payment Links (optional). Make one link per cart size:
+  //   1 beat = $45, 2 beats = $90, 3 beats = $99
+  // Leave them "" and checkout sends you an order email instead.
+  checkout: { 1: "", 2: "", 3: "" },
+
+  licensing: "Lease ($45): MP3 + WAV, non-exclusive.\nAny 3 beats: $99, applied automatically.\nExclusive: full ownership. Contact for a price.\nCredit: prod. PRIA on every release."
+};
+
+/* ---------- YOUR BEATS ----------
+   EASY WAY (no code): upload MP3s into the "beats" folder on GitHub,
+   named like this:   Night Drive - 140 - B min - trap.mp3
+   The store reads that folder and builds the list from the file names.
+   Put  SOLD  in a file name to mark it sold, e.g.  Night Drive - 140 - B min - trap - SOLD.mp3
+   Start names with 01, 02, 03... to choose the order.
+
+   The list below is only used when the folder has no MP3s yet (demo beats). */
+const BEATS = [
+  { title: "Ghost Signal",  bpm: 142, key: "F# min", tags: "dark trap", file: "beats/ghost-signal.mp3" },
+  { title: "Concrete Halo", bpm: 88,  key: "C min",  tags: "boom bap",  file: "beats/concrete-halo.mp3" },
+  { title: "Late Checkout", bpm: 150, key: "A min",  tags: "rage",      file: "beats/late-checkout.mp3" },
+  { title: "Low Orbit",     bpm: 132, key: "D min",  tags: "melodic",   file: "beats/low-orbit.mp3" },
+  { title: "Velvet Static", bpm: 96,  key: "G min",  tags: "r&b",       file: "beats/velvet-static.mp3" },
+  { title: "Nine Lives",    bpm: 160, key: "E min",  tags: "drill",     file: "beats/nine-lives.mp3" },
+];
+/* ===================== end of store settings ===================== */
+
+const LOGO_SRC = "data:image/png;base64,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";
+
+(async function(){
+"use strict";
+const $ = s => document.querySelector(s);
+const fmt = p => "$" + (p % 1 ? p.toFixed(2) : String(p));
+const DEAL = STORE.deal, MAX_CART = DEAL.count;
+STORE.contact = `Email: ${STORE.email}\nWeb: prodpria.com\nIG: ${STORE.instagram}\nExclusives, customs and questions.`;
+/* read the beats folder on GitHub and build the list from file names */
+function parseBeatName(name){
+  const base = decodeURIComponent(name).replace(/\.(mp3|wav|m4a|ogg)$/i, "").replace(/^\s*(\d+[.)]|0\d+)\s*-?\s*/, "");
+  const parts = base.split(/\s+-\s+|_-_/).map(t => t.trim()).filter(Boolean);
+  const beat = { title: parts.shift() || base, bpm: 0, key: "", tags: "", sold: false };
+  const tags = [];
+  for (const p of parts){
+    if (/^sold$/i.test(p)) beat.sold = true;
+    else if (!beat.bpm && /^\d{2,3}(\s*bpm)?$/i.test(p)) beat.bpm = parseInt(p, 10);
+    else if (!beat.key && /^[A-G](#|b)?\s*(m|min|minor|maj|major)?$/i.test(p)){
+      const k = p.match(/^([A-G])(#|b)?\s*(\w*)$/i);
+      beat.key = k[1].toUpperCase() + (k[2] || "") + (/^maj/i.test(k[3]) ? " maj" : k[3] ? " min" : "");
+    }
+    else tags.push(p);
+  }
+  beat.tags = tags.join(", "); if (!beat.bpm) beat.bpm = 140; if (!beat.key) beat.key = "C min";
+  return beat;
+}
+async function loadBeatsFolder(){
+  let repo = (STORE.github || "").trim().replace(/^https?:\/\/github\.com\//, "").replace(/\/$/, "");
+  const host = location.hostname.match(/^([^.]+)\.github\.io$/i);
+  if (!repo && host){ const first = location.pathname.split("/").filter(Boolean)[0]; repo = host[1] + "/" + (first && !first.includes(".") ? first : host[0]); }
+  if (!repo) return;
+  const cacheKey = "pria-beats:" + repo;
+  let files = null;
+  try { const c = JSON.parse(sessionStorage.getItem(cacheKey) || "null"); if (c && Date.now() - c.t < 5 * 60e3) files = c.files; } catch(e) {}
+  if (!files){
+    const ctl = new AbortController(); setTimeout(() => ctl.abort(), 4000);
+    const res = await fetch(`https://api.github.com/repos/${repo}/contents/beats`, { signal: ctl.signal });
+    if (!res.ok) return;
+    files = (await res.json()).filter(f => f.type === "file" && /\.(mp3|wav|m4a|ogg)$/i.test(f.name)).map(f => ({ name: f.name, url: f.download_url }));
+    try { sessionStorage.setItem(cacheKey, JSON.stringify({ t: Date.now(), files })); } catch(e) {}
+  }
+  if (!files.length) return;
+  files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+  const onSameSite = !!host && !STORE.github;
+  const list = files.map(f => Object.assign(parseBeatName(f.name), { preview: onSameSite ? "beats/" + encodeURIComponent(f.name) : f.url }));
+  BEATS.splice(0, BEATS.length, ...list);
+}
+try { await loadBeatsFolder(); } catch(e) { /* keep the list in the file */ }
+BEATS.forEach(b => { if (!b.preview && b.file) b.preview = b.file; });
+const slug = t => t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+let cart = [];
+try { cart = JSON.parse(localStorage.getItem("pria-cart") || "[]").filter(i => BEATS[i] && !BEATS[i].sold).slice(0, MAX_CART); } catch(e) { cart = []; }
+const saveCart = () => { try { localStorage.setItem("pria-cart", JSON.stringify(cart)); } catch(e) {} };
+const cartTotal = (n = cart.length) => n >= DEAL.count ? DEAL.price + (n - DEAL.count) * STORE.leasePrice : n * STORE.leasePrice;
+const inCart = i => cart.includes(i);
+function dealHint(){
+  const n = cart.length, left = DEAL.count - n;
+  if (n === 0) return `Any ${DEAL.count} for ${fmt(DEAL.price)}`;
+  if (left > 0) return `Add ${left} more: ${DEAL.count} for ${fmt(DEAL.price)}`;
+  return `Deal applied, you save ${fmt(DEAL.count * STORE.leasePrice - DEAL.price)}`;
+}
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ---------- assets ---------- */
+const logoImg = new Image();
+await new Promise(r => { logoImg.onload = r; logoImg.onerror = r; logoImg.src = LOGO_SRC; });
+$("#brandLogo").src = LOGO_SRC;
+try {
+  await Promise.race([
+    Promise.all([
+      document.fonts.load('600 30px "Pixelify Sans"'),
+      document.fonts.load('700 30px "Pixelify Sans"'),
+      document.fonts.load('800 40px "Archivo"'),
+      document.fonts.load('600 20px "Archivo"')
+    ]),
+    new Promise(r => setTimeout(r, 2500))
+  ]);
+} catch(e) {}
+
+/* ---------- theme ---------- */
+let isDark = false;
+try { isDark = localStorage.getItem("pria-theme") === "dark"; } catch(e) {}
+document.documentElement.dataset.theme = isDark ? "dark" : "light";
+
+/* one glossy black used for face, edges, buttons, wheel and screen frame in dark mode */
+const GLOSS_BLACK = "#0a0a0b";
+const WHEEL_DARK = "#2b2b2e"; // flat matte dark grey wheel in dark mode
+function setGloss(mat, dark, tinted = true){
+  if (!mat.userData.light) mat.userData.light = { color: mat.color.clone(), roughness: mat.roughness, metalness: mat.metalness, env: mat.envMapIntensity };
+  const L = mat.userData.light;
+  if (dark){
+    if (tinted) mat.color.set(GLOSS_BLACK).convertSRGBToLinear();
+    mat.roughness = 0.12; mat.metalness = 0; mat.envMapIntensity = 0.3;
+  } else {
+    mat.color.copy(L.color); mat.roughness = L.roughness; mat.metalness = L.metalness; mat.envMapIntensity = L.env;
+  }
+  mat.needsUpdate = true;
+}
+
+/* ---------- renderer / scene ---------- */
+const canvas = $("#stage");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+renderer.setClearColor(isDark ? 0x000000 : 0xffffff, 1);
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 100);
+camera.position.set(0, 0, 9);
+
+function makeEnv(){
+  const s = new THREE.Scene();
+  s.add(new THREE.Mesh(new THREE.BoxGeometry(30, 30, 30), new THREE.MeshBasicMaterial({ color: 0x7c7c7c, side: THREE.BackSide })));
+  const panel = (w, h, x, y, z, k) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(k, k, k), side: THREE.DoubleSide }));
+    m.position.set(x, y, z); m.lookAt(0, 0, 0); s.add(m);
+  };
+  panel(10, 3, 0, 9, 5, 7);
+  panel(2.5, 12, -10, 1, 3, 4);
+  panel(2.5, 12, 10, 2, -4, 5);
+  panel(14, 1.5, 0, -3, 11, 2);
+  panel(3, 3, 6, 6, 9, 6);
+  const pm = new THREE.PMREMGenerator(renderer);
+  const t = pm.fromScene(s, 0.035).texture; pm.dispose(); return t;
+}
+scene.environment = makeEnv();
+const key = new THREE.DirectionalLight(0xffffff, 1.1); key.position.set(3, 5, 6); scene.add(key);
+scene.add(new THREE.HemisphereLight(0xffffff, 0xdddddd, 0.35));
+
+/* ---------- helpers ---------- */
+function rrShape(w, h, r){
+  const s = new THREE.Shape(), x = -w/2, y = -h/2;
+  s.moveTo(x + r, y); s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r);
+  s.lineTo(x + w, y + h - r); s.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  s.lineTo(x + r, y + h); s.quadraticCurveTo(x, y + h, x, y + h - r);
+  s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y); return s;
+}
+function rrPlane(w, h, r){
+  const g = new THREE.ShapeGeometry(rrShape(w, h, r), 24);
+  const uv = g.attributes.uv, p = g.attributes.position;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, (p.getX(i) + w/2) / w, (p.getY(i) + h/2) / h);
+  return g;
+}
+function cv(w, h){ const c = document.createElement("canvas"); c.width = w; c.height = h; return [c, c.getContext("2d")]; }
+function tex(c, color = true){
+  const t = new THREE.CanvasTexture(c);
+  if (color) t.encoding = THREE.sRGBEncoding;
+  t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  return t;
+}
+let seed = 7;
+const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+function scratches(g, w, h, n, minA, maxA, color, maxLen){
+  for (let i = 0; i < n; i++){
+    const x = rnd() * w, y = rnd() * h, len = 10 + rnd() * maxLen, ang = rnd() * Math.PI * 2, bend = (rnd() - .5) * len * .6;
+    g.strokeStyle = `rgba(${color},${minA + rnd() * (maxA - minA)})`;
+    g.lineWidth = .4 + rnd() * 1.1;
+    g.beginPath(); g.moveTo(x, y);
+    g.quadraticCurveTo(x + Math.cos(ang) * len/2 + bend, y + Math.sin(ang) * len/2 - bend,
+                       x + Math.cos(ang) * len, y + Math.sin(ang) * len);
+    g.stroke();
+  }
+}
+function speckle(g, w, h, n, color, a){
+  for (let i = 0; i < n; i++){ g.fillStyle = `rgba(${color},${rnd() * a})`; g.fillRect(rnd() * w, rnd() * h, 1 + rnd() * 1.5, 1 + rnd() * 1.5); }
+}
+
+/* ---------- device dimensions ---------- */
+const W = 1.74, H = 3.6, D = 0.126, BEV = 0.024;
+const FW = W - 0.06, FH = H - 0.06;           // flat face area
+const SCREEN_Y = 1.05, SCREEN_W = 1.28, SCREEN_H = 1.10, LCD_H = 550; // taller screen, grows upward
+const KNOB_Y = -0.66, KNOB_R = 0.52;
+const BTN_Y = -1.36, BTN_X = 0.44;
+
+const rig = new THREE.Group(); scene.add(rig);
+const dev = new THREE.Group(); rig.add(dev);
+
+/* body */
+const bodyGeo = new THREE.ExtrudeGeometry(rrShape(W - BEV*2, H - BEV*2, 0.156), {
+  depth: D - BEV*2, bevelEnabled: true, bevelThickness: BEV, bevelSize: BEV, bevelSegments: 8, curveSegments: 32 });
+bodyGeo.translate(0, 0, -(D - BEV*2) / 2);
+const capMat = new THREE.MeshStandardMaterial({ color: 0x121212, roughness: 0.5, metalness: 0.1 });
+const sideMat = new THREE.MeshStandardMaterial({ color: 0xeeeeec, roughness: 0.25, metalness: 0.05, envMapIntensity: 0.8 });
+const body = new THREE.Mesh(bodyGeo, [capMat, sideMat]); body.userData.role = "body"; dev.add(body);
+
+/* face mapping helpers */
+const FCW = 512, FCH = Math.round(512 * FH / FW);
+const fx = x => (x + FW/2) / FW * FCW, fy = y => (FH/2 - y) / FH * FCH, fs = s => s / FW * FCW;
+
+/* front face (white in light mode, black in dark mode) */
+let frontMesh = null;
+function buildFront(dark){
+  seed = 11;
+  const [c, g] = cv(FCW, FCH), [rc, rg] = cv(FCW, FCH);
+  g.fillStyle = dark ? GLOSS_BLACK : "#f3f3f1"; g.fillRect(0, 0, FCW, FCH);
+  rg.fillStyle = "rgb(150,150,150)"; rg.fillRect(0, 0, FCW, FCH);
+  // edge wear
+  const ew = g.createLinearGradient(0, 0, FCW, 0);
+  ew.addColorStop(0, "rgba(90,90,90,.18)"); ew.addColorStop(.06, "rgba(0,0,0,0)"); ew.addColorStop(.94, "rgba(0,0,0,0)"); ew.addColorStop(1, "rgba(90,90,90,.18)");
+  if (!dark){ g.fillStyle = ew; g.fillRect(0, 0, FCW, FCH); }
+  // smudges (glossier spots)
+  for (let i = 0; i < 14; i++){
+    const x = rnd() * FCW, y = rnd() * FCH, r = 30 + rnd() * 90;
+    const sg = rg.createRadialGradient(x, y, 0, x, y, r);
+    sg.addColorStop(0, "rgba(70,70,70,.55)"); sg.addColorStop(1, "rgba(70,70,70,0)");
+    rg.fillStyle = sg; rg.fillRect(x - r, y - r, r*2, r*2);
+  }
+  if (!dark){ speckle(g, FCW, FCH, 1200, "255,255,255", .03); scratches(g, FCW, FCH, 260, .02, .1, "200,200,200", 60); }
+  scratches(rg, FCW, FCH, 260, .2, .6, "230,230,230", 60);
+  // knob well shading
+  const kx = fx(0), ky = fy(KNOB_Y), kr = fs(KNOB_R + 0.07);
+  const kg = g.createRadialGradient(kx, ky, kr * .8, kx, ky, kr * 1.15);
+  kg.addColorStop(0, "rgba(0,0,0,0)"); kg.addColorStop(1, "rgba(0,0,0,0)");
+  g.fillStyle = kg; g.beginPath(); g.arc(kx, ky, kr * 1.15, 0, Math.PI*2); g.fill();
+  // printed logo under screen
+  const lw = fs(0.32), lh = lw * logoImg.height / logoImg.width;
+  const [lc, lg] = cv(logoImg.width, logoImg.height);
+  lg.drawImage(logoImg, 0, 0); lg.globalCompositeOperation = "source-in"; lg.fillStyle = dark ? "#ffffff" : "#8d8a86"; lg.fillRect(0, 0, lc.width, lc.height);
+  g.globalAlpha = .85; g.drawImage(lc, fx(0) - lw/2, fy(BTN_Y) - lh/2, lw, lh); g.globalAlpha = 1;
+  // button glyphs
+  g.fillStyle = dark ? "#ffffff" : "#8d8a86";
+  const gy = fy(BTN_Y - 0.23);
+  const bx = fx(-BTN_X);
+  // back glyph: two left triangles
+  for (let k = 0; k < 2; k++){ const ox = bx - 4 + k * 12; g.beginPath(); g.moveTo(ox - 6, gy); g.lineTo(ox + 6, gy - 7); g.lineTo(ox + 6, gy + 7); g.fill(); }
+  const px = fx(BTN_X);
+  g.beginPath(); g.moveTo(px - 12, gy - 7); g.lineTo(px - 1, gy); g.lineTo(px - 12, gy + 7); g.fill();
+  g.fillRect(px + 3, gy - 7, 3.5, 14); g.fillRect(px + 9, gy - 7, 3.5, 14);
+
+  const front = new THREE.Mesh(rrPlane(FW, FH, 0.15), new THREE.MeshPhysicalMaterial({
+    map: tex(c), roughness: dark ? 0.12 : 0.18, metalness: 0.0, clearcoat: 1, clearcoatRoughness: 0.03, reflectivity: dark ? 0.4 : 0.6, envMapIntensity: dark ? 0.3 : 1.0 }));
+  front.position.z = D/2 + 0.0012; front.userData.role = "body";
+  if (frontMesh){ dev.remove(frontMesh); frontMesh.material.map.dispose(); frontMesh.material.dispose(); frontMesh.geometry.dispose(); }
+  frontMesh = front; dev.add(front);
+}
+buildFront(isDark);
+
+/* back face — scratched dark chrome with engraved PRIA logo */
+{
+  seed = 23;
+  const [c, g] = cv(FCW, FCH), [rc, rg] = cv(FCW, FCH), [bc, bg] = cv(FCW, FCH);
+  g.fillStyle = "#0c0c0d"; g.fillRect(0, 0, FCW, FCH);
+  rg.fillStyle = "rgb(55,55,55)"; rg.fillRect(0, 0, FCW, FCH);
+  bg.fillStyle = "#ffffff"; bg.fillRect(0, 0, FCW, FCH);
+  // heavy hairline wear like a pocket-worn player
+  scratches(g, FCW, FCH, 900, .03, .22, "210,210,215", 140);
+  scratches(g, FCW, FCH, 140, .1, .35, "235,235,240", 40);
+  seed = 23; scratches(rg, FCW, FCH, 900, .15, .5, "190,190,190", 140);
+  speckle(g, FCW, FCH, 3000, "255,255,255", .06);
+
+  const tint = (img, w, h, color) => { const [tc, tg] = cv(w, h); tg.drawImage(img, 0, 0, w, h); tg.globalCompositeOperation = "source-in"; tg.fillStyle = color; tg.fillRect(0, 0, w, h); return tc; };
+  // engraved logo: dark lip, lit inner edge, bright cut floor
+  const lw = FCW * 0.66, lh = lw * logoImg.height / logoImg.width, lx = (FCW - lw)/2, ly = FCH * 0.3;
+  g.drawImage(tint(logoImg, lw, lh, "rgba(0,0,0,.9)"), lx - 2, ly - 2, lw, lh);
+  g.drawImage(tint(logoImg, lw, lh, "#b9b6b1"), lx + 1.5, ly + 1.5, lw, lh);
+  g.drawImage(tint(logoImg, lw, lh, "#8f8c88"), lx, ly, lw, lh);
+  speckle(g, FCW, FCH, 0, "0,0,0", 0);
+  rg.drawImage(tint(logoImg, lw, lh, "rgb(175,175,175)"), lx, ly, lw, lh);
+  bg.filter = "blur(1.2px)"; bg.drawImage(tint(logoImg, lw, lh, "#202020"), lx, ly, lw, lh); bg.filter = "none";
+
+  // engraved type
+  const engrave = (txt, font, x, y, align = "center") => {
+    for (const [dx, dy, col] of [[-1, -1, "rgba(0,0,0,.9)"], [1, 1, "#aeaba6"], [0, 0, "#8a8783"]]){
+      g.font = font; g.textAlign = align; g.fillStyle = col; g.fillText(txt, x + dx, y + dy);
+    }
+    rg.font = font; rg.textAlign = align; rg.fillStyle = "rgb(175,175,175)"; rg.fillText(txt, x, y);
+    bg.font = font; bg.textAlign = align; bg.fillStyle = "#303030"; bg.fillText(txt, x, y);
+  };
+  const cy = ly + lh + 70;
+  engrave("beatpod", '800 44px "Archivo", sans-serif', FCW/2, cy);
+  // box with beat count
+  const bw = 150, bh = 50, bx = (FCW - bw)/2, by = FCH * 0.74;
+  for (const [d, col] of [[-1, "rgba(0,0,0,.9)"], [1, "#aeaba6"], [0, "#8a8783"]]){
+    g.strokeStyle = col; g.lineWidth = 3; g.beginPath(); g.roundRect ? g.roundRect(bx + d, by + d, bw, bh, 10) : g.rect(bx + d, by + d, bw, bh); g.stroke();
+  }
+  engrave("714GB", '700 24px "Archivo", sans-serif', FCW/2, by + 33);
+  engrave("Produced by PRIA. All rights reserved. © 2026 PRIA LLC.", '500 13px "Archivo", sans-serif', FCW/2, FCH * 0.86);
+  engrave("Made in California.   Unit no. PRIA-0001", '500 13px "Archivo", sans-serif', FCW/2, FCH * 0.86 + 20);
+
+  const back = new THREE.Mesh(rrPlane(FW, FH, 0.15), new THREE.MeshStandardMaterial({
+    map: tex(c), roughnessMap: tex(rc, false), bumpMap: tex(bc, false), bumpScale: 0.012,
+    roughness: 1, metalness: 0.88, envMapIntensity: 1.25 }));
+  back.rotation.y = Math.PI; back.position.z = -D/2 - 0.0012; back.userData.role = "body"; dev.add(back);
+}
+
+let screenBezel;
+/* screen */
+const [lcdC, L] = cv(640, LCD_H);
+const lcdTex = tex(lcdC);
+{
+  const bezel = screenBezel = new THREE.Mesh(rrPlane(SCREEN_W + 0.12, SCREEN_H + 0.12, 0.07), new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.25, metalness: 0.2 }));
+  bezel.position.set(0, SCREEN_Y, D/2 + 0.0025); bezel.userData.role = "screen"; dev.add(bezel);
+  const scr = new THREE.Mesh(new THREE.PlaneGeometry(SCREEN_W, SCREEN_H), new THREE.MeshBasicMaterial({ map: lcdTex, toneMapped: false }));
+  scr.position.set(0, SCREEN_Y, D/2 + 0.004); scr.userData.role = "screen"; dev.add(scr);
+  const glass = new THREE.Mesh(rrPlane(SCREEN_W + 0.12, SCREEN_H + 0.12, 0.07), new THREE.MeshStandardMaterial({
+    color: 0xffffff, metalness: 1, roughness: 0.06, transparent: true, opacity: 0.13, envMapIntensity: 1.6 }));
+  glass.position.set(0, SCREEN_Y, D/2 + 0.006); glass.userData.role = "screen"; dev.add(glass);
+}
+
+/* knob */
+const knobBase = new THREE.Group(); knobBase.position.set(0, KNOB_Y, D/2); dev.add(knobBase);
+const knobSpin = new THREE.Group(); knobBase.add(knobSpin);
+let knobMesh, knobSideT, knobTopT;
+const [knobSC, sg] = cv(1024, 64), [knobTC, tg] = cv(512, 512);
+// wheel: grey #A1A5A9 in light mode, black with white markings in dark mode
+function paintKnob(dark){
+  sg.fillStyle = dark ? WHEEL_DARK : "#a1a5a9"; sg.fillRect(0, 0, 1024, 64);
+  for (let x = 0; x < 1024; x += 8){
+    const gr = sg.createLinearGradient(x, 0, x + 8, 0);
+    const [e, m] = dark ? ["#242427", "#323236"] : ["#8e9296", "#b6babe"];
+    gr.addColorStop(0, e); gr.addColorStop(.5, m); gr.addColorStop(1, e);
+    sg.fillStyle = gr; sg.fillRect(x, 0, 8, 64);
+  }
+  seed = 5;
+  tg.fillStyle = dark ? WHEEL_DARK : "#a1a5a9"; tg.fillRect(0, 0, 512, 512);
+  if (!dark) for (let r = 256; r > 0; r -= 1.2){ const v = (dark ? 8 : 154) + rnd() * (dark ? 6 : 16); tg.strokeStyle = `rgb(${v},${v + 4},${v + 8})`; tg.lineWidth = 1.4; tg.beginPath(); tg.arc(256, 256, r, 0, Math.PI*2); tg.stroke(); }
+  if (!dark){ tg.strokeStyle = "rgba(255,255,255,.35)"; tg.lineWidth = 6; tg.beginPath(); tg.arc(256, 256, 250, 0, Math.PI*2); tg.stroke(); }
+  tg.fillStyle = dark ? WHEEL_DARK : "#a1a5a9"; tg.beginPath(); tg.arc(256, 256, 104, 0, Math.PI*2); tg.fill();
+  tg.fillStyle = "#4a9bff"; tg.beginPath(); tg.arc(256, 256 - 196, 11, 0, Math.PI*2); tg.fill();
+  if (knobSideT){ knobSideT.needsUpdate = true; knobTopT.needsUpdate = true; }
+}
+{
+  const well = new THREE.Mesh(new THREE.CircleGeometry(KNOB_R + 0.06, 72), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
+  well.position.z = 0.002; well.userData.role = "knob"; knobBase.add(well);
+  knobSideT = tex(knobSC); knobSideT.wrapS = THREE.RepeatWrapping;
+  knobTopT = tex(knobTC);
+  paintKnob(isDark);
+  const sideT = knobSideT, topT = knobTopT;
+  const metal = (o) => new THREE.MeshStandardMaterial(Object.assign({ metalness: 0.2, roughness: 0.4, envMapIntensity: 1.1 }, o));
+  knobMesh = new THREE.Mesh(new THREE.CylinderGeometry(KNOB_R, KNOB_R, 0.06, 96, 1, false),
+    [metal({ map: sideT, bumpMap: sideT, bumpScale: 0.01, roughness: 0.45 }), metal({ map: topT, roughness: 0.3 }), metal({ color: 0xa1a5a9 })]);
+  knobMesh.rotation.x = Math.PI / 2; knobMesh.position.z = 0.03; knobMesh.userData.role = "knob";
+  knobSpin.add(knobMesh);
+}
+const centerBtn = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.04, 64), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6, metalness: 0.05, envMapIntensity: 0.35 }));
+centerBtn.rotation.x = Math.PI/2; centerBtn.position.z = 0.075; centerBtn.userData.role = "select"; knobBase.add(centerBtn);
+
+function smallButton(x, role){
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.05, 48), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.55, metalness: 0.1, envMapIntensity: 0.35 }));
+  m.rotation.x = Math.PI/2; m.position.set(x, BTN_Y, D/2 + 0.025); m.userData.role = role; m.userData.z0 = m.position.z; dev.add(m);
+  return m;
+}
+const backBtn = smallButton(-BTN_X, "back");
+const playBtn = smallButton(BTN_X, "play");
+centerBtn.userData.z0 = centerBtn.position.z;
+
+const led = new THREE.Mesh(new THREE.CircleGeometry(0.03, 24), new THREE.MeshBasicMaterial({ color: 0x3a2a12, toneMapped: false }));
+led.position.set(0.62, 1.715, D/2 + 0.002); dev.add(led);
+
+/* floor shadow */
+const [shc, shg] = cv(256, 256);
+{ const gr = shg.createRadialGradient(128, 128, 0, 128, 128, 128); gr.addColorStop(0, "rgba(0,0,0,.4)"); gr.addColorStop(.55, "rgba(0,0,0,.12)"); gr.addColorStop(1, "rgba(0,0,0,0)"); shg.fillStyle = gr; shg.fillRect(0, 0, 256, 256); }
+const shadow = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 1.0), new THREE.MeshBasicMaterial({ map: tex(shc), transparent: true, depthWrite: false, toneMapped: false }));
+shadow.rotation.x = -Math.PI/2; shadow.position.y = -2.55; scene.add(shadow);
+
+/* ---------- LCD UI ---------- */
+const AMBER = "#1446c4", DIM = "rgba(20,70,196,.55)", LCD_BG = "#f3f6fb";
+const ui = { stack: [{ id: "main", sel: 0, top: 0 }] };
+const cur = () => ui.stack[ui.stack.length - 1];
+const push = (id, extra) => { ui.stack.push(Object.assign({ id, sel: 0, top: 0 }, extra || {})); onNav(); };
+const back = () => { if (ui.stack.length > 1){ ui.stack.pop(); onNav(); tick(); } };
+
+function lines(text){ return text.split("\n"); }
+function wrap(text, font, maxW){
+  L.font = font; const out = [];
+  for (const para of lines(text)){
+    let line = "";
+    for (const w of para.split(" ")){
+      const t = line ? line + " " + w : w;
+      if (L.measureText(t).width > maxW && line){ out.push(line); line = w; } else line = t;
+    }
+    out.push(line);
+  }
+  return out;
+}
+
+function items(s){
+  switch (s.id){
+    case "main": return [
+      { label: "Beats", right: "›", go: () => push("beats") },
+      { label: "Now playing", right: "›", go: () => push("now") },
+      { label: "Cart", right: cart.length ? `${cart.length}  ${fmt(cartTotal())}` : "›", go: () => push("cart") },
+      { label: "Shuffle a preview", go: () => { const i = Math.floor(Math.random() * BEATS.length); play(i); push("now"); } },
+      { label: "Licensing", right: "›", go: () => push("text", { title: "Licensing", body: STORE.licensing }) },
+      { label: "Contact", right: "›", go: () => push("text", { title: "Contact", body: STORE.contact }) },
+      { label: "prodpria.com", right: "›", go: () => openLink(STORE.website, "Opening prodpria.com") },
+      { label: "Woofer", right: "play", go: () => { gameReset(); push("game"); } }
+    ];
+    case "beats": return BEATS.map((b, i) => ({ label: b.title, right: b.sold ? "sold" : inCart(i) ? "added" : b.bpm + "", go: () => push("beat", { i }) }));
+    case "beat": {
+      const b = BEATS[s.i];
+      const rows = [{ label: audio.playing === s.i ? "Stop preview" : "Play preview", go: () => toggle(s.i) }];
+      rows.push({ label: inCart(s.i) ? "Remove from cart" : "Add lease to cart", right: b.sold ? "sold" : fmt(STORE.leasePrice), go: () => toggleCart(s.i) });
+      rows.push({ label: "Exclusive", right: b.sold ? "sold" : "contact", go: () => askExclusive(s.i) });
+      if (cart.length) rows.push({ label: `Cart (${cart.length})`, right: fmt(cartTotal()), go: () => push("cart") });
+      return rows;
+    }
+    case "cart": {
+      const rows = cart.map(i => ({ label: BEATS[i].title, right: "remove", go: () => toggleCart(i) }));
+      if (cart.length) rows.push({ label: "Checkout", right: fmt(cartTotal()), go: checkout });
+      else rows.push({ label: "Browse beats", right: "›", go: () => { back(); push("beats"); } });
+      return rows;
+    }
+    default: return [];
+  }
+}
+
+function fitText(txt, maxW){
+  if (L.measureText(txt).width <= maxW) return txt;
+  while (txt.length > 1 && L.measureText(txt + "…").width > maxW) txt = txt.slice(0, -1);
+  return txt + "…";
+}
+
+function drawLCD(){
+  const s = cur(), Wc = 640, Hc = LCD_H;
+  L.save();
+  L.fillStyle = LCD_BG; L.fillRect(0, 0, Wc, Hc);
+  const vg = L.createRadialGradient(320, 220, 80, 320, 240, 420);
+  vg.addColorStop(0, "rgba(255,255,255,0)"); vg.addColorStop(1, "rgba(110,130,165,.28)");
+  L.fillStyle = vg; L.fillRect(0, 0, Wc, Hc);
+  L.shadowColor = "rgba(20,70,196,.18)"; L.shadowBlur = 4;
+  L.fillStyle = AMBER; L.strokeStyle = AMBER; L.textBaseline = "middle";
+
+  // header
+  const titles = { main: STORE.artist, beats: "Beats", beat: "Beat", cart: "Cart", game: "Woofer", now: "Now playing", text: s.title };
+  L.font = '700 28px "Pixelify Sans", monospace'; L.textAlign = "center"; L.fillText(titles[s.id] || "", 320, 30);
+  if (audio.playing >= 0){ L.beginPath(); L.moveTo(24, 20); L.lineTo(42, 30); L.lineTo(24, 40); L.fill(); }
+  L.lineWidth = 2; L.strokeRect(574, 20, 40, 20); L.fillRect(615, 26, 4, 8); L.fillRect(578, 24, 26, 12);
+  L.globalAlpha = .5; L.fillRect(16, 58, 608, 2); L.globalAlpha = 1;
+
+  let y0 = 66;
+  if (s.id === "beat"){
+    const b = BEATS[s.i];
+    L.textAlign = "left"; L.font = '700 34px "Pixelify Sans", monospace';
+    L.fillText(fitText(b.title, 590), 24, 92);
+    L.font = '500 24px "Pixelify Sans", monospace'; L.fillStyle = DIM;
+    L.fillText(`${b.bpm} BPM   ${b.key}   ${b.tags || ""}`, 24, 128);
+    L.fillStyle = AMBER; y0 = 150;
+  }
+  if (s.id === "cart"){
+    L.textAlign = "left"; L.font = '700 34px "Pixelify Sans", monospace';
+    L.fillText(cart.length ? `${cart.length} beat${cart.length > 1 ? "s" : ""}` : "Empty", 24, 92);
+    L.textAlign = "right"; L.fillText(fmt(cartTotal()), 616, 92);
+    L.textAlign = "left"; L.font = '500 22px "Pixelify Sans", monospace'; L.fillStyle = DIM;
+    L.fillText(fitText(dealHint(), 590), 24, 128);
+    L.fillStyle = AMBER; y0 = 146;
+  }
+
+  const list = items(s);
+  if (list.length){
+    const rowH = 52, vis = Math.floor((Hc - y0 - 8) / rowH);
+    if (s.sel < s.top) s.top = s.sel;
+    if (s.sel >= s.top + vis) s.top = s.sel - vis + 1;
+    for (let k = 0; k < vis && s.top + k < list.length; k++){
+      const it = list[s.top + k], y = y0 + k * rowH, on = s.top + k === s.sel;
+      if (on){ L.shadowBlur = 0; L.strokeStyle = AMBER; L.fillStyle = AMBER; L.lineWidth = 3; L.strokeRect(13.5, y + 4.5, 601 - (list.length > vis ? 14 : 0), rowH - 9); L.beginPath(); L.moveTo(22, y + rowH/2 - 8); L.lineTo(33, y + rowH/2); L.lineTo(22, y + rowH/2 + 8); L.fill(); }
+      L.fillStyle = AMBER;
+      L.font = '600 28px "Pixelify Sans", monospace'; L.textAlign = "left";
+      const rw = it.right ? (L.measureText(it.right).width + 28) : 0;
+      L.fillText(fitText(it.label, 546 - rw), on ? 42 : 26, y + rowH/2);
+      if (it.right){ L.textAlign = "right"; L.fillText(it.right, 600 - (list.length > vis ? 14 : 0), y + rowH/2); }
+      L.shadowBlur = 8; L.fillStyle = AMBER;
+    }
+    if (list.length > vis){
+      const th = Hc - y0 - 16, bh = Math.max(30, th * vis / list.length), by = y0 + 6 + (th - bh) * (s.top / (list.length - vis));
+      L.globalAlpha = .3; L.fillRect(616, y0 + 6, 8, th); L.globalAlpha = 1; L.fillRect(616, by, 8, bh);
+    }
+  }
+
+  if (s.id === "now"){
+    L.textAlign = "center";
+    if (audio.playing < 0){
+      L.font = '600 28px "Pixelify Sans", monospace'; L.fillText("Nothing playing", 320, 200);
+      L.font = '500 22px "Pixelify Sans", monospace'; L.fillStyle = DIM; L.fillText("Pick a beat, then press play", 320, 244);
+    } else {
+      const b = BEATS[audio.playing];
+      L.font = '700 40px "Pixelify Sans", monospace'; L.fillText(fitText(b.title, 580), 320, 150);
+      L.font = '500 24px "Pixelify Sans", monospace'; L.fillStyle = DIM; L.fillText(`${b.bpm} BPM   ${b.key}`, 320, 196);
+      L.fillStyle = AMBER;
+      const p = progress();
+      L.lineWidth = 2; L.strokeRect(60, 268, 520, 18); L.fillRect(63, 271, 514 * p.frac, 12);
+      L.font = '500 22px "Pixelify Sans", monospace';
+      L.textAlign = "left"; L.fillText(p.a, 60, 314); L.textAlign = "right"; L.fillText(p.b, 580, 314);
+      L.textAlign = "center"; L.fillStyle = DIM; L.fillText("center: pause   menu: buy it", 320, 400);
+    }
+  }
+  if (s.id === "text"){
+    const ls = wrap(s.body, '500 24px "Pixelify Sans", monospace', 590);
+    const vis = 10; s.max = Math.max(0, ls.length - vis); s.top = Math.min(s.top, s.max);
+    L.textAlign = "left"; L.font = '500 24px "Pixelify Sans", monospace';
+    ls.slice(s.top, s.top + vis).forEach((ln, k) => L.fillText(ln, 24, 92 + k * 38));
+  }
+
+  if (s.id === "game") drawGame();
+
+  // scanlines + pixel grid
+  L.shadowBlur = 0; L.fillStyle = "rgba(0,10,40,.05)";
+  for (let y = 0; y < Hc; y += 3) L.fillRect(0, y, Wc, 1);
+  L.restore();
+  lcdTex.needsUpdate = true;
+}
+
+/* ---------- Woofer: circular brick-breaker inside a speaker cone ----------
+   Turn the wheel to slide the surround paddle around the rim.
+   Center launches / pauses. Knock out every ring of the cone.
+   Outer ring = hi-hats, middle = snares, inner = keys, paddle = kick,
+   the dust cap in the middle drops an 808. */
+const G = { state: "ready", score: 0, best: 0, lives: 5, level: 1, ang: -Math.PI/2, tang: -Math.PI/2,
+  bx: 0, by: 0, vx: 0, vy: 0, bricks: [], msg: "", msgT: 0, flash: 0, pump: 0, combo: 0, trail: [] };
+try { G.best = +localStorage.getItem("pria-woofer-best") || 0; } catch(e) {}
+const CX = 320, CY = 323, RIM = 178, PAD_W = 0.5, BALL = 8, CAP = 30;
+const RINGS = [ { r0: 42, r1: 64, n: 10 }, { r0: 70, r1: 92, n: 14 }, { r0: 98, r1: 120, n: 18 } ];
+const angDiff = (a, b) => { let d = (a - b) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; return d; };
+function gameLevel(){
+  G.bricks = [];
+  const rings = G.level >= 2 ? RINGS : RINGS.slice(1);           // track 1 starts with two rings
+  rings.forEach((rg, ri) => {
+    const ringIdx = RINGS.indexOf(rg), off = (G.level * 0.37) % 1;
+    for (let k = 0; k < rg.n; k++){
+      const a0 = (k + off) / rg.n * Math.PI * 2, a1 = a0 + Math.PI * 2 / rg.n;
+      G.bricks.push({ ring: ringIdx, r0: rg.r0, r1: rg.r1, a0, a1, k, hp: (G.level >= 3 && ringIdx === 2 && k % 2 === 0) ? 2 : 1 });
+    }
+  });
+  G.state = "ready"; G.vx = G.vy = 0; G.trail = [];
+}
+function gameReset(){ Object.assign(G, { score: 0, lives: 5, level: 1, combo: 0, msg: "", msgT: 0, flash: 0, ang: -Math.PI/2, tang: -Math.PI/2 }); gameLevel(); }
+function gameMsg(m, t = 1.1){ G.msg = m; G.msgT = t; }
+function gameMove(dir){ G.tang += dir * 0.2; }
+function ballSpeed(){ return 150 + (G.level - 1) * 18; }
+function gameButton(){
+  if (G.state === "ready"){
+    ensureCtx(); const sp = ballSpeed(), a = G.ang + Math.PI + (Math.random() - .5) * 0.5;
+    G.vx = Math.cos(a) * sp; G.vy = Math.sin(a) * sp; G.state = "play"; sfx("kick");
+  } else if (G.state === "play") G.state = "paused";
+  else if (G.state === "paused") G.state = "play";
+  else if (G.state === "over") gameReset();
+}
+function gameKeyRoot(){ const b = BEATS[audio.playing >= 0 ? audio.playing : cardBeat] || BEATS[0]; return 60 + (NOTE[(b.key || "C").split(" ")[0]] ?? 0) - 12; }
+const PENTA = [0, 3, 5, 7, 10, 12, 15, 17, 19, 22];
+function sfx(kind, arg = 0){
+  const c = ensureCtx(); if (!c) return; const t = c.currentTime + 0.005;
+  if (kind === "kick") voice808(t, 52, 0.25);
+  else if (kind === "boom") voice808(t, 38, 0.7);
+  else if (kind === "hat") voiceHat(t, 1.4);
+  else if (kind === "snare") voiceSnare(t);
+  else if (kind === "keys") voiceKeys(t, gameKeyRoot() + 12 + PENTA[arg % PENTA.length], 0.3);
+  else if (kind === "clear") [0, 2, 4, 7].forEach((k, j) => voiceKeys(t + j * 0.11, gameKeyRoot() + 12 + PENTA[k], 0.35));
+  else if (kind === "scratch"){
+    const s2 = c.createBufferSource(); s2.buffer = noise();
+    const f = c.createBiquadFilter(); f.type = "bandpass"; f.Q.value = 4;
+    f.frequency.setValueAtTime(400, t); f.frequency.exponentialRampToValueAtTime(2600, t + 0.12); f.frequency.exponentialRampToValueAtTime(300, t + 0.3);
+    const g = c.createGain(); g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.34);
+    s2.connect(f); f.connect(g); g.connect(audio.out); s2.start(t); s2.stop(t + 0.36);
+  }
+}
+function bounceRadial(nx, ny){ const d = G.vx * nx + G.vy * ny; G.vx -= 2 * d * nx; G.vy -= 2 * d * ny; }
+function gameUpdate(dt){
+  if (G.msgT > 0) G.msgT -= dt;
+  G.flash = Math.max(0, G.flash - dt * 3); G.pump = Math.max(0, G.pump - dt * 5);
+  G.ang += angDiff(G.tang, G.ang) * Math.min(1, dt * 14);
+  if (G.state === "clear"){ if (G.msgT <= 0){ G.level++; gameLevel(); } return; }
+  if (G.state === "ready"){ const rr = RIM - 16; G.bx = Math.cos(G.ang) * rr; G.by = Math.sin(G.ang) * rr; return; }
+  if (G.state !== "play") return;
+  const steps = 4, h = dt / steps;
+  for (let s2 = 0; s2 < steps; s2++){
+    G.bx += G.vx * h; G.by += G.vy * h;
+    const r = Math.hypot(G.bx, G.by), th = Math.atan2(G.by, G.bx), nx = G.bx / (r || 1), ny = G.by / (r || 1);
+    // dust cap: bass drop
+    if (r < CAP + BALL && G.vx * nx + G.vy * ny < 0){ bounceRadial(nx, ny); G.pump = 1; sfx("boom"); G.score += 5; }
+    // surround paddle: kick
+    if (r > RIM - 10 - BALL && G.vx * nx + G.vy * ny > 0 && Math.abs(angDiff(th, G.ang)) < PAD_W + 0.06){
+      const off = Math.max(-1, Math.min(1, angDiff(th, G.ang) / PAD_W)), sp = Math.min(ballSpeed() * 1.6, Math.hypot(G.vx, G.vy) * 1.02);
+      const a = th + Math.PI - off * 0.8; G.vx = Math.cos(a) * sp; G.vy = Math.sin(a) * sp;
+      G.bx = nx * (RIM - 11 - BALL); G.by = ny * (RIM - 11 - BALL); G.combo = 0; G.pump = .5; sfx("kick");
+    }
+    // cone rings: drums
+    for (const br of G.bricks){
+      if (br.hp <= 0 || r < br.r0 - BALL || r > br.r1 + BALL) continue;
+      const mid = (br.a0 + br.a1) / 2, half = (br.a1 - br.a0) / 2, da = angDiff(th, mid);
+      if (Math.abs(da) > half + BALL / r) continue;
+      const radPen = Math.min(r + BALL - br.r0, br.r1 - (r - BALL)), angPen = (half + BALL / r - Math.abs(da)) * r;
+      if (radPen < angPen) bounceRadial(nx, ny);
+      else { const tx = -ny * Math.sign(da), ty = nx * Math.sign(da); const d = G.vx * tx + G.vy * ty; if (d < 0){ G.vx -= 2 * d * tx; G.vy -= 2 * d * ty; } }
+      br.hp--; G.combo++; G.score += 10 * G.combo; G.pump = .6;
+      sfx(br.ring === 2 ? "hat" : br.ring === 1 ? "snare" : "keys", br.k);
+      if (G.combo === 6) gameMsg("Hype!"); else if (G.combo === 12) gameMsg("Speaker's blown!");
+      break;
+    }
+    G.trail.push([G.bx, G.by]); if (G.trail.length > 10) G.trail.shift();
+    if (r > RIM + 22){
+      G.lives--; G.combo = 0; G.flash = 1; sfx("scratch");
+      if (G.lives <= 0){
+        G.state = "over";
+        if (G.score > G.best){ G.best = G.score; try { localStorage.setItem("pria-woofer-best", String(G.best)); } catch(e) {} }
+      } else { G.state = "ready"; G.vx = G.vy = 0; G.trail = []; gameMsg("Missed it", 0.9); }
+      return;
+    }
+    if (!G.bricks.some(b => b.hp > 0)){ G.state = "clear"; G.vx = G.vy = 0; gameMsg(`Track ${G.level} complete`, 1.8); sfx("clear"); return; }
+  }
+}
+function drawGame(){
+  const P = '"Pixelify Sans", monospace', pulse = 1 + G.pump * 0.035;
+  L.shadowBlur = 0;
+  L.save(); L.translate(CX, CY);
+  // speaker basket + screws
+  L.strokeStyle = AMBER; L.lineWidth = 3; L.beginPath(); L.arc(0, 0, RIM + 14, 0, Math.PI*2); L.stroke();
+  L.fillStyle = AMBER; for (let k = 0; k < 8; k++){ const a = k / 8 * Math.PI * 2 + Math.PI / 8; L.beginPath(); L.arc(Math.cos(a) * (RIM + 26), Math.sin(a) * (RIM + 26), 4, 0, Math.PI*2); L.fill(); }
+  // rubber surround + cone ridges (pump with the hits)
+  L.save(); L.scale(pulse, pulse);
+  L.globalAlpha = .12; L.lineWidth = 16; L.beginPath(); L.arc(0, 0, RIM - 2, 0, Math.PI*2); L.stroke();
+  L.lineWidth = 1.5; for (let rr = CAP + 6; rr < RIM - 12; rr += 9){ L.globalAlpha = .1 + (rr / RIM) * .12; L.beginPath(); L.arc(0, 0, rr, 0, Math.PI*2); L.stroke(); }
+  L.globalAlpha = 1;
+  // bricks: ring segments
+  for (const br of G.bricks){
+    if (br.hp <= 0) continue;
+    const g = 0.035;
+    L.fillStyle = AMBER; L.globalAlpha = br.hp > 1 ? 1 : [.95, .75, .55][br.ring];
+    L.beginPath(); L.arc(0, 0, br.r1, br.a0 + g, br.a1 - g); L.arc(0, 0, br.r0, br.a1 - g, br.a0 + g, true); L.closePath(); L.fill();
+    if (br.hp > 1){ L.globalAlpha = 1; L.strokeStyle = LCD_BG; L.lineWidth = 2; L.beginPath(); L.arc(0, 0, (br.r0 + br.r1) / 2, br.a0 + .08, br.a1 - .08); L.stroke(); }
+  }
+  L.globalAlpha = 1;
+  // dust cap
+  L.fillStyle = AMBER; L.beginPath(); L.arc(0, 0, CAP, 0, Math.PI*2); L.fill();
+  L.fillStyle = LCD_BG; L.globalAlpha = .35; L.beginPath(); L.arc(-8, -9, CAP * .45, 0, Math.PI*2); L.fill(); L.globalAlpha = 1;
+  L.font = `700 16px ${P}`; L.textAlign = "center"; L.fillStyle = LCD_BG; L.fillText(STORE.artist, 0, 2);
+  L.restore();
+  // paddle on the rim
+  L.strokeStyle = AMBER; L.lineWidth = 12; L.lineCap = "round";
+  L.beginPath(); L.arc(0, 0, RIM - 4, G.ang - PAD_W, G.ang + PAD_W); L.stroke(); L.lineCap = "butt";
+  // ball + trail
+  if (G.state !== "over"){
+    L.fillStyle = AMBER;
+    G.trail.forEach(([x, y], k) => { L.globalAlpha = (k + 1) / G.trail.length * .25; L.beginPath(); L.arc(x, y, BALL * .7, 0, Math.PI*2); L.fill(); });
+    L.globalAlpha = 1; L.beginPath(); L.arc(G.bx, G.by, BALL, 0, Math.PI*2); L.fill();
+    L.fillStyle = LCD_BG; L.beginPath(); L.arc(G.bx, G.by, 2.5, 0, Math.PI*2); L.fill();
+  }
+  L.restore();
+  if (G.flash > 0){ L.fillStyle = AMBER; L.globalAlpha = G.flash * .25; L.fillRect(0, 60, 640, LCD_H - 60); L.globalAlpha = 1; }
+  // status
+  L.font = `600 22px ${P}`; L.fillStyle = AMBER;
+  L.textAlign = "left"; L.fillText(`Score ${G.score}`, 20, 76);
+  L.textAlign = "right"; L.fillText(`Track ${G.level}`, 620, 76);
+  for (let k = 0; k < G.lives; k++){ const x = 24 + k * 20; L.beginPath(); L.arc(x, 100, 6, 0, Math.PI*2); L.stroke(); L.beginPath(); L.arc(x, 100, 2, 0, Math.PI*2); L.fill(); }
+  // overlays
+  const banner = (big, small, small2) => {
+    const hgt = small2 ? 128 : 100, y = 271;
+    L.fillStyle = LCD_BG; L.globalAlpha = .93; L.fillRect(50, y, 540, hgt); L.globalAlpha = 1;
+    L.strokeStyle = AMBER; L.lineWidth = 3; L.strokeRect(50.5, y + .5, 540, hgt);
+    L.fillStyle = AMBER; L.textAlign = "center"; L.font = `700 34px ${P}`; L.fillText(big, 320, y + 36);
+    L.font = `500 21px ${P}`; L.fillStyle = DIM; if (small) L.fillText(small, 320, y + 74); if (small2) L.fillText(small2, 320, y + 104);
+  };
+  if (G.state === "ready" && G.msgT <= 0 && G.score === 0 && G.level === 1) banner("Woofer", "Turn the wheel to move. Center launches.", "Clear the cone to drop the track");
+  else if (G.state === "ready" && G.msgT <= 0){ L.textAlign = "center"; L.fillStyle = DIM; L.font = `500 20px ${P}`; L.fillText("Center to launch", 320, 104); }
+  else if (G.state === "paused") banner("Paused", "Center to keep playing");
+  else if (G.state === "over") banner("Speaker blown", `Score ${G.score}   Best ${G.best}`, "Center to run it back");
+  if (G.msgT > 0 && G.state !== "over"){ L.textAlign = "center"; L.fillStyle = AMBER; L.font = `700 26px ${P}`; L.fillText(G.msg, 320, 104); }
+}
+
+/* ---------- navigation ---------- */
+function scroll(dir){
+  const s = cur();
+  if (s.id === "game"){ gameMove(dir); return; }
+  if (s.id === "text"){ s.top = Math.max(0, Math.min(s.max || 0, s.top + dir)); drawLCD(); tick(); return; }
+  const list = items(s); if (!list.length) return;
+  const n = Math.max(0, Math.min(list.length - 1, s.sel + dir));
+  if (n !== s.sel){ s.sel = n; tick(); onNav(); }
+}
+function select(){
+  const s = cur();
+  if (s.id === "game"){ gameButton(); return; }
+  if (s.id === "now"){ if (audio.playing >= 0) toggle(audio.playing); return; }
+  const it = items(s)[s.sel]; if (it && it.go) it.go();
+  drawLCD();
+}
+function onNav(){ drawLCD(); syncCard(); }
+
+/* ---------- cart + checkout ---------- */
+function toggleCart(i){
+  const b = BEATS[i];
+  if (b.sold){ toast("This beat has been sold exclusively."); return; }
+  if (inCart(i)) cart = cart.filter(x => x !== i);
+  else if (cart.length >= MAX_CART){ toast(`${MAX_CART} beats max per order. Check out, then grab more.`); return; }
+  else cart.push(i);
+  saveCart();
+  const s = cur(); s.sel = Math.max(0, Math.min(s.sel, items(s).length - 1));
+  toast(inCart(i) ? `${b.title} added. ${dealHint()}.` : `${b.title} removed.`);
+  drawLCD(); syncCard(true);
+}
+function openLink(url, label){
+  const w = window.open(url, "_blank");
+  if (w){ try { w.opener = null; } catch(e){} if (label) toast(label); }
+  else toast(`Your browser blocked the popup. <a href="${url}" target="_blank" rel="noopener">Open it here</a>`, 6000);
+}
+function askExclusive(i){
+  const b = BEATS[i];
+  if (b.sold){ toast("This beat has been sold exclusively."); return; }
+  const body = `Hi ${STORE.artist}, I'd like to make an offer for exclusive rights to "${b.title}" (${b.bpm} BPM, ${b.key}).\n\nMy name / artist name:\nMy offer:\n`;
+  location.href = `mailto:${STORE.email}?subject=${encodeURIComponent("Exclusive: " + b.title)}&body=${encodeURIComponent(body)}`;
+  toast(`Opening an email about ${b.title}. Or DM ${STORE.instagram}.`, 5000);
+}
+function checkout(){
+  if (!cart.length){ toast("Your cart is empty. Add a lease first."); return; }
+  const n = cart.length, names = cart.map(i => BEATS[i].title), total = fmt(cartTotal());
+  const link = STORE.checkout[n];
+  if (link){
+    // tells you which beats were bought (shows on the payment in Stripe)
+    const ref = cart.map(i => slug(BEATS[i].title)).join("_").slice(0, 200);
+    openLink(link + (link.includes("?") ? "&" : "?") + "client_reference_id=" + encodeURIComponent(ref), `Opening checkout: ${n} beat${n > 1 ? "s" : ""}, ${total}.`);
+  } else {
+    const body = `Hi ${STORE.artist}, I'd like to lease:\n\n${names.map(t => "- " + t).join("\n")}\n\nTotal: ${total}${n >= DEAL.count ? " (3-beat deal)" : ""}\n\nMy name / artist name:\n`;
+    location.href = `mailto:${STORE.email}?subject=${encodeURIComponent(`Beat order: ${names.join(", ")}`)}&body=${encodeURIComponent(body)}`;
+    toast("Opening an order email. You'll get payment details back.", 5000);
+  }
+}
+
+/* ---------- side card (HTML) ---------- */
+const playSVG = '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 1.5v13l11-6.5z"/></svg>';
+const pauseSVG = '<svg viewBox="0 0 16 16" fill="currentColor"><rect x="3" y="2" width="3.5" height="12"/><rect x="9.5" y="2" width="3.5" height="12"/></svg>';
+let cardBeat = 0;
+function focusedBeat(){
+  const s = cur();
+  if (s.id === "beats") return s.sel;
+  if (s.id === "beat") return s.i;
+  if (s.id === "cart" && s.sel < cart.length) return cart[s.sel];
+  if (s.id === "now" && audio.playing >= 0) return audio.playing;
+  return cardBeat;
+}
+function syncCard(force){
+  const i = focusedBeat(), s = cur();
+  const active = s.id === "cart" ? 2 : (s.id === "beat" && s.sel > 0 ? Math.min(s.sel - 1, 2) : -1);
+  if (!force && i === cardBeat && $("#lics").childElementCount && $("#lics").dataset.beat == i){
+    [...$("#lics").children].forEach((el, k) => el.classList.toggle("on", k === active));
+    $("#cardPlay").innerHTML = audio.playing === i ? pauseSVG : playSVG; return;
+  }
+  cardBeat = i; const b = BEATS[i];
+  $("#cardTitle").textContent = b.title;
+  $("#cardMeta").textContent = `${b.bpm} BPM, ${b.key}${b.tags ? ", " + b.tags : ""}${b.sold ? ". Sold exclusively" : ""}`;
+  $("#cardPlay").innerHTML = audio.playing === i ? pauseSVG : playSVG;
+  $("#cardPlay").setAttribute("aria-label", `Play preview of ${b.title}`);
+  const box = $("#lics"); box.innerHTML = ""; box.dataset.beat = i;
+  const tile = (k, label, big, small, onClick, off) => {
+    const el = document.createElement("button"); el.type = "button";
+    el.className = "lic" + (off ? " off" : "") + (k === active ? " on" : "");
+    el.innerHTML = `<span>${label}</span><b>${big}</b><small>${small}</small>`;
+    if (off) el.disabled = true; else el.addEventListener("click", onClick);
+    box.appendChild(el);
+  };
+  const added = inCart(i);
+  tile(0, added ? "In cart" : "Lease", b.sold ? "Sold" : fmt(STORE.leasePrice), b.sold ? "No longer available" : added ? "Tap to remove" : "Tap to add", () => toggleCart(i), b.sold);
+  tile(1, "Exclusive", b.sold ? "Sold" : "Contact", b.sold ? "Taken" : "Make an offer", () => askExclusive(i), b.sold);
+  tile(2, `Cart (${cart.length})`, cart.length ? fmt(cartTotal()) : "Empty", cart.length ? `Checkout. ${dealHint()}` : dealHint(), () => cart.length ? checkout() : toast(`Add beats to your cart. ${dealHint()}.`), false);
+}
+$("#cardPlay").addEventListener("click", () => toggle(cardBeat));
+
+/* ---------- toast ---------- */
+let toastT;
+function toast(html, ms = 3200){ const t = $("#toast"); t.innerHTML = html; t.classList.add("show"); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), ms); }
+
+/* ---------- audio ---------- */
+const audio = { ctx: null, out: null, playing: -1, timer: null, next: 0, step: 0, el: null, t0: 0 };
+function ensureCtx(){
+  try { if (navigator.audioSession && navigator.audioSession.type !== "playback") navigator.audioSession.type = "playback"; } catch(e) {}
+  if (!audio.ctx){
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null;
+    audio.ctx = new AC();
+    const comp = audio.ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4;
+    audio.out = audio.ctx.createGain(); audio.out.gain.value = 0.7; audio.out.connect(comp); comp.connect(audio.ctx.destination);
+  }
+  if (audio.ctx.state === "suspended") audio.ctx.resume();
+  return audio.ctx;
+}
+let noiseBuf;
+function noise(){
+  if (noiseBuf) return noiseBuf;
+  const c = audio.ctx; noiseBuf = c.createBuffer(1, c.sampleRate, c.sampleRate);
+  const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; return noiseBuf;
+}
+function tick(){
+  const c = audio.ctx; if (!c) return;
+  const t = c.currentTime, s = c.createBufferSource(); s.buffer = noise();
+  const f = c.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 3500;
+  const g = c.createGain(); g.gain.setValueAtTime(0.12, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.015);
+  s.connect(f); f.connect(g); g.connect(c.destination); s.start(t); s.stop(t + 0.03);
+}
+const NOTE = { C:0, "C#":1, Db:1, D:2, "D#":3, Eb:3, E:4, F:5, "F#":6, Gb:6, G:7, "G#":8, Ab:8, A:9, "A#":10, Bb:10, B:11 };
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+function hash(str){ let h = 2166136261; for (const ch of str) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return Math.abs(h) || 1; }
+
+function makePattern(b){
+  let sd = hash(b.title); const r = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+  const pc = NOTE[(b.key || "C").split(" ")[0]] ?? 0, minor = !/maj/i.test(b.key || "");
+  const scale = minor ? [0, 3, 5, 7, 10, 12, 15] : [0, 4, 7, 9, 12, 14, 16];
+  const half = b.bpm >= 115; // trap-style half time
+  const kick = [], snare = [], hat = [], mel = [], bassN = [];
+  for (let i = 0; i < 32; i++){
+    const st = i % 16;
+    kick[i] = st === 0 || (r() < .22 && st % 2 === 0 && st !== 8 && st !== 4 && st !== 12);
+    snare[i] = half ? st === 8 : (st === 4 || st === 12);
+    hat[i] = half ? (r() < .15 ? 3 : 1) : (st % 2 === 0 ? 1 : (r() < .3 ? 1 : 0));
+    mel[i] = (i % 2 === 0 && r() < .55) ? 60 + pc + scale[Math.floor(r() * scale.length)] : null;
+    bassN[i] = kick[i] ? 36 + pc + (r() < .25 ? (minor ? 7 : 7) : 0) - (pc > 5 ? 12 : 0) : null;
+  }
+  return { kick, snare, hat, mel, bassN };
+}
+function voice808(t, freq, dur){
+  const c = audio.ctx, o = c.createOscillator(), g = c.createGain();
+  o.type = "sine"; o.frequency.setValueAtTime(freq * 3.2, t); o.frequency.exponentialRampToValueAtTime(freq, t + 0.06);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.9, t + 0.005); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  const sh = c.createWaveShaper(); const k = new Float32Array(256); for (let i = 0; i < 256; i++){ const x = i / 128 - 1; k[i] = Math.tanh(x * 2.2); } sh.curve = k;
+  o.connect(sh); sh.connect(g); g.connect(audio.out); o.start(t); o.stop(t + dur + 0.05);
+}
+function voiceSnare(t){
+  const c = audio.ctx, s = c.createBufferSource(); s.buffer = noise();
+  const f = c.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = 1900; f.Q.value = .7;
+  const g = c.createGain(); g.gain.setValueAtTime(0.55, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+  s.connect(f); f.connect(g); g.connect(audio.out); s.start(t); s.stop(t + 0.25);
+  const o = c.createOscillator(), og = c.createGain(); o.type = "triangle"; o.frequency.value = 190;
+  og.gain.setValueAtTime(0.3, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.08); o.connect(og); og.connect(audio.out); o.start(t); o.stop(t + 0.1);
+}
+function voiceHat(t, v){
+  const c = audio.ctx, s = c.createBufferSource(); s.buffer = noise();
+  const f = c.createBiquadFilter(); f.type = "highpass"; f.frequency.value = 7500;
+  const g = c.createGain(); g.gain.setValueAtTime(0.12 * v, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.045);
+  s.connect(f); f.connect(g); g.connect(audio.out); s.start(t); s.stop(t + 0.06);
+}
+function voiceKeys(t, m, dur){
+  const c = audio.ctx, f = c.createBiquadFilter(), g = c.createGain();
+  f.type = "lowpass"; f.frequency.setValueAtTime(2400, t); f.frequency.exponentialRampToValueAtTime(500, t + dur);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.09, t + 0.01); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  for (const det of [-6, 6]){ const o = c.createOscillator(); o.type = "sawtooth"; o.frequency.value = mtof(m); o.detune.value = det; o.connect(f); o.start(t); o.stop(t + dur + .05); }
+  f.connect(g); g.connect(audio.out);
+}
+function startSynth(b){
+  if (!ensureCtx()) return;
+  const pat = makePattern(b), sixteenth = 60 / b.bpm / 4;
+  audio.step = 0; audio.next = audio.ctx.currentTime + 0.06;
+  audio.timer = setInterval(() => {
+    while (audio.next < audio.ctx.currentTime + 0.12){
+      const i = audio.step % 32, t = audio.next;
+      if (pat.bassN[i] != null) voice808(t, mtof(pat.bassN[i]), sixteenth * 6);
+      if (pat.snare[i]) voiceSnare(t);
+      if (pat.hat[i] === 1) voiceHat(t, i % 4 === 0 ? 1 : .7);
+      if (pat.hat[i] === 3){ voiceHat(t, .6); voiceHat(t + sixteenth/3, .5); voiceHat(t + sixteenth*2/3, .5); }
+      if (pat.mel[i] != null) voiceKeys(t, pat.mel[i], sixteenth * 3);
+      audio.next += sixteenth; audio.step++;
+    }
+  }, 25);
+}
+function stop(){
+  clearInterval(audio.timer); audio.timer = null;
+  if (audio.el){ audio.el.pause(); audio.el = null; }
+  if (audio.src){ try { audio.src.stop(); } catch(e) {} audio.src = null; }
+  audio.token = (audio.token || 0) + 1;
+  audio.playing = -1;
+}
+/* load a beat's audio bytes: embedded copy first (can't be blocked), then the file */
+const bufCache = {};
+async function beatBytes(b){
+  if (b.b64){ const bin = atob(b.b64), u = new Uint8Array(bin.length); for (let k = 0; k < bin.length; k++) u[k] = bin.charCodeAt(k); return u.buffer; }
+  const res = await fetch(b.preview); if (!res.ok) throw new Error("http " + res.status); return await res.arrayBuffer();
+}
+function playFailed(i, b, blocked){
+  if (audio.playing !== i) return;
+  audio.el = null; audio.playing = -1; onNav();
+  toast(blocked ? "Your browser blocked the sound. Tap play again, and check your phone isn't on silent."
+                : `Couldn't play ${b.title}. Tap play again.`, 5000);
+}
+/* plan B: decode the beat and play it through Web Audio (same beat, different route) */
+async function playViaWebAudio(i, b, token){
+  try {
+    const c = ensureCtx(); if (!c) throw new Error("no audio");
+    let buf = bufCache[b.title];
+    if (!buf){
+      const bytes = await beatBytes(b);
+      buf = await new Promise((ok, no) => { const p = c.decodeAudioData(bytes, ok, no); if (p && p.then) p.then(ok, no); });
+      bufCache[b.title] = buf;
+    }
+    if (audio.token !== token || audio.playing !== i) return;
+    await c.resume();
+    const s = c.createBufferSource(); s.buffer = buf; s.loop = true; s.connect(audio.out); s.start();
+    audio.src = s; audio.srcStart = c.currentTime; audio.srcDur = buf.duration; onNav();
+  } catch(e) { if (audio.token === token) playFailed(i, b, false); }
+}
+function play(i){
+  stop(); const c = ensureCtx(); const token = audio.token;
+  const b = BEATS[i]; audio.playing = i; audio.t0 = performance.now(); cardBeat = i;
+  if (b.preview || b.b64){
+    toast(`Loading ${b.title}...`, 1500);
+    setTimeout(() => { if (audio.token === token && audio.playing === i && !audio.src && !(audio.el && !audio.el.paused && audio.el.currentTime > 0)) toast(`Still trying to play ${b.title}. Tap play again if you hear nothing.`, 5000); }, 9000);
+    if (!b.preview){ playViaWebAudio(i, b, token); onNav(); return; }
+    // plan A: normal audio player
+    const el = audio.el = new Audio(); el.loop = true; el.preload = "auto"; el.playsInline = true; el.setAttribute("playsinline", "");
+    let switched = false;
+    const planB = () => { if (switched || audio.token !== token) return; switched = true; if (audio.el === el){ el.pause(); audio.el = null; } playViaWebAudio(i, b, token); };
+    el.addEventListener("error", planB);
+    const guard = setTimeout(() => { if (audio.el === el && (el.paused || !el.currentTime) && el.readyState < 3) planB(); }, 4000);
+    el.addEventListener("playing", () => clearTimeout(guard));
+    el.src = b.preview;
+    el.play().catch(err => {
+      if (audio.token !== token) return;
+      if (err && err.name === "NotAllowedError"){ clearTimeout(guard); switched = true; stop(); playFailed(i, b, true); return; }
+      planB();
+    });
+  } else startSynth(b);
+  onNav();
+}
+function toggle(i){ if (audio.playing === i) stop(); else play(i); onNav(); }
+function progress(){
+  const f = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+  if (audio.el && audio.el.duration) return { frac: audio.el.currentTime / audio.el.duration, a: f(audio.el.currentTime), b: f(audio.el.duration) };
+  if (audio.src && audio.ctx){ const t = (audio.ctx.currentTime - audio.srcStart) % audio.srcDur; return { frac: t / audio.srcDur, a: f(t), b: f(audio.srcDur) }; }
+  if (BEATS[audio.playing] && (BEATS[audio.playing].preview || BEATS[audio.playing].b64)) return { frac: 0, a: "0:00", b: "loading" };
+  const b = BEATS[audio.playing], loop = 60 / b.bpm * 4 * 8, el = (performance.now() - audio.t0) / 1000;
+  return { frac: (el % loop) / loop, a: f(el), b: "loop" };
+}
+
+/* ---------- interaction ---------- */
+let mode = "free";           // free | locking | locked
+let userSpun = false, lastInput = performance.now();
+const vel = { x: 0, y: 0.004 };
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+const AX = new THREE.Vector3(1, 0, 0), AY = new THREE.Vector3(0, 1, 0), FWD = new THREE.Vector3();
+const qa = new THREE.Quaternion(), qb = new THREE.Quaternion(), qTarget = new THREE.Quaternion();
+let drag = null;
+const STEP = Math.PI * 2 / 18;
+
+function rotateBy(ax, ay){ qa.setFromAxisAngle(AY, ay); qb.setFromAxisAngle(AX, ax); dev.quaternion.premultiply(qa).premultiply(qb); }
+function pick(e){
+  const r = canvas.getBoundingClientRect();
+  ndc.set((e.clientX - r.left) / r.width * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const hit = ray.intersectObjects(dev.children, true)[0];
+  return hit ? hit.object.userData.role || "body" : null;
+}
+function knobScreen(){
+  const v = new THREE.Vector3(); knobBase.getWorldPosition(v); v.project(camera);
+  const r = canvas.getBoundingClientRect();
+  return { x: (v.x + 1) / 2 * r.width + r.left, y: (1 - v.y) / 2 * r.height + r.top };
+}
+function press(mesh){ mesh.position.z = mesh.userData.z0 - 0.02; setTimeout(() => mesh.position.z = mesh.userData.z0, 130); }
+
+function setLockUI(){
+  const on = mode !== "free";
+  $("#lockBtn").classList.toggle("on", on);
+  $("#lockBtn span").textContent = on ? "Locked in. Release" : "Lock in";
+  canvas.classList.toggle("locked", on);
+  $("#hint").textContent = on ? "Turn the knob to scroll. Press the center to select."
+                              : "Drag to spin it. Let go while it faces you and it locks in.";
+}
+function lockIn(){ if (mode !== "free") return; mode = "locking"; vel.x = vel.y = 0; setLockUI(); }
+function release(kick = true){ mode = "free"; userSpun = false; lastInput = performance.now(); if (kick) vel.y = 0.09; setLockUI(); }
+function applyTheme(dark){
+  isDark = dark;
+  document.documentElement.dataset.theme = dark ? "dark" : "light";
+  renderer.setClearColor(dark ? 0x000000 : 0xffffff, 1);
+  buildFront(dark);
+  paintKnob(dark);
+  for (const m of [sideMat, backBtn.material, playBtn.material, centerBtn.material, screenBezel.material]) setGloss(m, dark);
+  knobMesh.material.forEach((m, i) => {
+    setGloss(m, dark, false);
+    if (dark){
+      m.roughness = 0.95; m.envMapIntensity = 0.35;
+      if (i === 2) m.color.set(WHEEL_DARK).convertSRGBToLinear();
+    }
+  });
+  $("#themeBtn span").textContent = dark ? "Light" : "Dark";
+  $("#themeBtn").setAttribute("aria-label", dark ? "Switch to light mode" : "Switch to dark mode");
+  try { localStorage.setItem("pria-theme", dark ? "dark" : "light"); } catch(e) {}
+}
+applyTheme(isDark);
+$("#themeBtn").addEventListener("click", () => applyTheme(!isDark));
+$("#lockBtn").addEventListener("click", () => { mode === "free" ? lockIn() : release(); canvas.focus({ preventScroll: true }); });
+
+canvas.addEventListener("pointerdown", e => {
+  ensureCtx(); canvas.focus({ preventScroll: true });
+  canvas.setPointerCapture(e.pointerId);
+  lastInput = performance.now();
+  const d = { id: e.pointerId, x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, kind: "spin" };
+  if (mode === "locked"){
+    const role = pick(e);
+    if (role === "select"){ press(centerBtn); select(); d.kind = "none"; }
+    else if (role === "back"){ press(backBtn); back(); d.kind = "none"; }
+    else if (role === "play"){ press(playBtn); const i = focusedBeat(); toggle(audio.playing >= 0 ? audio.playing : i); d.kind = "none"; }
+    else if (role === "knob"){ const k = knobScreen(); d.kind = "dial"; d.cx = k.x; d.cy = k.y; d.a = Math.atan2(-(e.clientY - k.y), e.clientX - k.x); d.acc = 0; }
+    else d.kind = "maybe";
+  } else if (mode === "locking") d.kind = "maybe";
+  if (d.kind === "spin") canvas.classList.add("grabbing");
+  drag = d;
+});
+canvas.addEventListener("pointermove", e => {
+  if (!drag || e.pointerId !== drag.id) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY;
+  lastInput = performance.now();
+  if (drag.kind === "maybe" && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) > 10){ release(false); drag.kind = "spin"; canvas.classList.add("grabbing"); }
+  if (drag.kind === "spin"){ const k = 0.009; rotateBy(dy * k, dx * k); vel.x = dy * k; vel.y = dx * k; userSpun = true; }
+  if (drag.kind === "dial"){
+    const a = Math.atan2(-(e.clientY - drag.cy), e.clientX - drag.cx);
+    let da = a - drag.a; if (da > Math.PI) da -= Math.PI * 2; if (da < -Math.PI) da += Math.PI * 2;
+    drag.a = a; knobSpin.rotation.z += da; drag.acc -= da;  // clockwise = positive = scroll down
+    while (drag.acc > STEP){ drag.acc -= STEP; scroll(1); }
+    while (drag.acc < -STEP){ drag.acc += STEP; scroll(-1); }
+  }
+});
+const endDrag = e => { if (!drag || e.pointerId !== drag.id) return; canvas.classList.remove("grabbing"); drag = null; lastInput = performance.now(); };
+canvas.addEventListener("pointerup", endDrag);
+canvas.addEventListener("pointercancel", endDrag);
+canvas.addEventListener("dblclick", () => { mode === "free" ? lockIn() : release(); });
+canvas.addEventListener("wheel", e => {
+  if (mode !== "locked") return;
+  e.preventDefault(); wheelAcc += e.deltaY;
+  while (wheelAcc > 45){ wheelAcc -= 45; knobSpin.rotation.z -= STEP; scroll(1); }
+  while (wheelAcc < -45){ wheelAcc += 45; knobSpin.rotation.z += STEP; scroll(-1); }
+}, { passive: false });
+let wheelAcc = 0;
+window.addEventListener("keydown", e => {
+  if (e.target.closest && e.target.closest("a,button") && (e.key === "Enter" || e.key === " ")) return;
+  const k = e.key;
+  if (k === "l" || k === "L"){ mode === "free" ? lockIn() : release(); return; }
+  if (["ArrowDown", "ArrowUp", "Enter", "Escape", "Backspace", " ", "ArrowLeft", "ArrowRight"].includes(k)){
+    if (mode === "free") lockIn();
+    e.preventDefault(); ensureCtx();
+    if (k === "ArrowDown" || k === "ArrowRight"){ knobSpin.rotation.z -= STEP; scroll(1); }
+    if (k === "ArrowUp" || k === "ArrowLeft"){ knobSpin.rotation.z += STEP; scroll(-1); }
+    if (k === "Enter"){ press(centerBtn); select(); }
+    if (k === "Escape" || k === "Backspace"){ press(backBtn); back(); }
+    if (k === " "){ press(playBtn); toggle(audio.playing >= 0 ? audio.playing : focusedBeat()); }
+  }
+});
+
+/* ---------- layout ---------- */
+let baseDist = 9, offsetY = 0;
+function resize(){
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  const headH = 76, cardH = $("#card").getBoundingClientRect().height + 24;
+  const hintH = $("#hint").getBoundingClientRect().height + 6;
+  const availH = Math.max(200, h - headH - cardH - hintH - 12);
+  const tanF = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const needH = 4.1 * h / availH, needW = 2.1;
+  baseDist = Math.max((needH / 2) / tanF, (needW / 2) / (tanF * camera.aspect));
+  offsetY = (cardH + hintH - headH) / 2;
+  camera.setViewOffset(w, h, 0, offsetY, w, h);
+  camera.updateProjectionMatrix();
+  $("#hint").style.bottom = (cardH + 4) + "px";
+  camera.position.z = mode === "free" ? baseDist : baseDist * 0.92;
+}
+addEventListener("resize", resize);
+
+/* ---------- loop ---------- */
+let last = performance.now(), redrawT = 0;
+function frame(now){
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  const f60 = dt * 60, t = now / 1000;
+
+  if (mode === "free"){
+    if (!drag){
+      rotateBy(vel.x * f60, vel.y * f60);
+      const damp = Math.pow(0.955, f60); vel.x *= damp; vel.y *= damp;
+      FWD.set(0, 0, 1).applyQuaternion(dev.quaternion);
+      const speed = Math.hypot(vel.x, vel.y);
+      if (userSpun && FWD.z > Math.cos(THREE.MathUtils.degToRad(24)) && speed < 0.05) lockIn();
+      if (!reduceMotion && now - lastInput > 3500 && speed < 0.006){ userSpun = false; vel.y += (0.006 - vel.y) * 0.05; }
+    }
+  } else {
+    // ease to face the viewer, with a little tilt that follows the pointer
+    qTarget.setFromEuler(new THREE.Euler(tiltY * 0.06, tiltX * 0.08, 0));
+    dev.quaternion.slerp(qTarget, 1 - Math.exp(-dt * (mode === "locking" ? 7 : 5)));
+    if (mode === "locking" && dev.quaternion.angleTo(qTarget) < 0.02){ mode = "locked"; setLockUI(); }
+  }
+  const targetZ = mode === "free" ? baseDist : baseDist * 0.92;
+  camera.position.z += (targetZ - camera.position.z) * (1 - Math.exp(-dt * 5));
+  const amp = reduceMotion ? 0 : (mode === "free" ? 0.08 : 0.015);
+  rig.position.y = Math.sin(t * 1.3) * amp + 0.05;
+  const sc = 1 - (rig.position.y) * 0.6; shadow.scale.set(sc, sc, 1); shadow.material.opacity = 0.9 - rig.position.y;
+
+  led.material.color.setHex(audio.playing >= 0 ? (Math.sin(t * 6) > -0.2 ? 0x4a9bff : 0x15336e) : 0x0e1a30);
+  if (audio.playing >= 0 && cur().id === "now" && (redrawT += dt) > 0.25){ redrawT = 0; drawLCD(); }
+  if (cur().id === "game"){ gameUpdate(dt); drawLCD(); }
+  else if (G.state === "play") G.state = "paused";
+
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+let tiltX = 0, tiltY = 0;
+addEventListener("pointermove", e => { tiltX = (e.clientX / innerWidth - .5) * 2; tiltY = (e.clientY / innerHeight - .5) * 2; });
+
+/* ---------- start ---------- */
+dev.quaternion.setFromEuler(new THREE.Euler(0.15, Math.PI * 0.85, 0.05));
+drawLCD(); syncCard(); setLockUI(); resize();
+$("#loading").style.opacity = 0; setTimeout(() => $("#loading").remove(), 600);
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
