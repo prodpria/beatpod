@@ -540,7 +540,7 @@ function items(s){
       { label: "Licensing", right: "›", go: () => push("text", { title: "Licensing", body: STORE.licensing }) },
       { label: "Contact", right: "›", go: () => push("text", { title: "Contact", body: STORE.contact }) },
       { label: "prodpria.com", right: "›", go: () => openLink(STORE.website, "Opening prodpria.com") },
-      { label: "Woofer", right: "play", go: () => { gameReset(); push("game"); } }
+      { label: "Sygnal", right: "play", go: () => { gameReset(); push("game"); } }
     ];
     case "beats": return BEATS.map((b, i) => ({ label: b.title, right: b.sold ? "sold" : inCart(i) ? "added" : b.bpm + "", go: () => push("beat", { i }) }));
     case "beat": {
@@ -578,7 +578,7 @@ function drawLCD(){
   L.fillStyle = AMBER; L.strokeStyle = AMBER; L.textBaseline = "middle";
 
   // header
-  const titles = { main: STORE.artist, beats: "Beats", beat: "Beat", cart: "Cart", game: "Woofer", now: "Now playing", text: s.title };
+  const titles = { main: STORE.artist, beats: "Beats", beat: "Beat", cart: "Cart", game: "Sygnal", now: "Now playing", text: s.title };
   L.font = '700 28px "Pixelify Sans", monospace'; L.textAlign = "center"; L.fillText(titles[s.id] || "", 320, 30);
   if (audio.playing >= 0){ L.beginPath(); L.moveTo(24, 20); L.lineTo(42, 30); L.lineTo(24, 40); L.fill(); }
   L.lineWidth = 2; L.strokeRect(574, 20, 40, 20); L.fillRect(615, 26, 4, 8); L.fillRect(578, 24, 26, 12);
@@ -656,14 +656,14 @@ function drawLCD(){
   lcdTex.needsUpdate = true;
 }
 
-/* ---------- Woofer: circular brick-breaker inside a speaker cone ----------
+/* ---------- Sygnal: circular brick-breaker on a green CRT, rings spin ----------
    Turn the wheel to slide the surround paddle around the rim.
    Center launches / pauses. Knock out every ring of the cone.
    Outer ring = hi-hats, middle = snares, inner = keys, paddle = kick,
    the dust cap in the middle drops an 808. */
 const G = { state: "ready", score: 0, best: 0, lives: 5, level: 1, ang: -Math.PI/2, tang: -Math.PI/2,
-  bx: 0, by: 0, vx: 0, vy: 0, bricks: [], msg: "", msgT: 0, flash: 0, pump: 0, combo: 0, trail: [] };
-try { G.best = +localStorage.getItem("pria-woofer-best") || 0; } catch(e) {}
+  bx: 0, by: 0, vx: 0, vy: 0, bricks: [], msg: "", msgT: 0, flash: 0, pump: 0, combo: 0, trail: [], rot: 0, hits: [] };
+try { G.best = +localStorage.getItem("pria-sygnal-best") || 0; } catch(e) {}
 const CX = 320, CY = 323, RIM = 178, PAD_W = 0.5, BALL = 8, CAP = 30;
 const RINGS = [ { r0: 42, r1: 64, n: 10 }, { r0: 70, r1: 92, n: 14 }, { r0: 98, r1: 120, n: 18 } ];
 const angDiff = (a, b) => { let d = (a - b) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; return d; };
@@ -714,6 +714,8 @@ function gameUpdate(dt){
   if (G.msgT > 0) G.msgT -= dt;
   G.flash = Math.max(0, G.flash - dt * 3); G.pump = Math.max(0, G.pump - dt * 5);
   G.ang += angDiff(G.tang, G.ang) * Math.min(1, dt * 14);
+  if (G.state !== "paused" && G.state !== "over") G.rot += dt * (0.22 + 0.06 * (G.level - 1)) * (G.level % 2 ? 1 : -1);
+  G.hits = G.hits.filter(h => (h.t -= dt) > 0);
   if (G.state === "clear"){ if (G.msgT <= 0){ G.level++; gameLevel(); } return; }
   if (G.state === "ready"){ const rr = RIM - 16; G.bx = Math.cos(G.ang) * rr; G.by = Math.sin(G.ang) * rr; return; }
   if (G.state !== "play") return;
@@ -732,14 +734,14 @@ function gameUpdate(dt){
     // cone rings: drums
     for (const br of G.bricks){
       if (br.hp <= 0 || r < br.r0 - BALL || r > br.r1 + BALL) continue;
-      const mid = (br.a0 + br.a1) / 2, half = (br.a1 - br.a0) / 2, da = angDiff(th, mid);
+      const mid = (br.a0 + br.a1) / 2 + G.rot, half = (br.a1 - br.a0) / 2, da = angDiff(th, mid);
       if (Math.abs(da) > half + BALL / r) continue;
       const radPen = Math.min(r + BALL - br.r0, br.r1 - (r - BALL)), angPen = (half + BALL / r - Math.abs(da)) * r;
       if (radPen < angPen) bounceRadial(nx, ny);
       else { const tx = -ny * Math.sign(da), ty = nx * Math.sign(da); const d = G.vx * tx + G.vy * ty; if (d < 0){ G.vx -= 2 * d * tx; G.vy -= 2 * d * ty; } }
-      br.hp--; G.combo++; G.score += 10 * G.combo; G.pump = .6;
+      br.hp--; G.combo++; G.score += 10 * G.combo; G.pump = .6; G.hits.push({ x: G.bx, y: G.by, t: .5 });
       sfx(br.ring === 2 ? "hat" : br.ring === 1 ? "snare" : "keys", br.k);
-      if (G.combo === 6) gameMsg("Hype!"); else if (G.combo === 12) gameMsg("Speaker's blown!");
+      if (G.combo === 6) gameMsg("Locked on!"); else if (G.combo === 12) gameMsg("Full signal!");
       break;
     }
     G.trail.push([G.bx, G.by]); if (G.trail.length > 10) G.trail.shift();
@@ -747,69 +749,132 @@ function gameUpdate(dt){
       G.lives--; G.combo = 0; G.flash = 1; sfx("scratch");
       if (G.lives <= 0){
         G.state = "over";
-        if (G.score > G.best){ G.best = G.score; try { localStorage.setItem("pria-woofer-best", String(G.best)); } catch(e) {} }
-      } else { G.state = "ready"; G.vx = G.vy = 0; G.trail = []; gameMsg("Missed it", 0.9); }
+        if (G.score > G.best){ G.best = G.score; try { localStorage.setItem("pria-sygnal-best", String(G.best)); } catch(e) {} }
+      } else { G.state = "ready"; G.vx = G.vy = 0; G.trail = []; gameMsg("Signal dropped", 0.9); }
       return;
     }
     if (!G.bricks.some(b => b.hp > 0)){ G.state = "clear"; G.vx = G.vy = 0; gameMsg(`Track ${G.level} complete`, 1.8); sfx("clear"); return; }
   }
 }
 function drawGame(){
-  const P = '"Pixelify Sans", monospace', pulse = 1 + G.pump * 0.035;
-  L.shadowBlur = 0;
-  L.save(); L.translate(CX, CY);
-  // speaker basket + screws
-  L.strokeStyle = AMBER; L.lineWidth = 3; L.beginPath(); L.arc(0, 0, RIM + 14, 0, Math.PI*2); L.stroke();
-  L.fillStyle = AMBER; for (let k = 0; k < 8; k++){ const a = k / 8 * Math.PI * 2 + Math.PI / 8; L.beginPath(); L.arc(Math.cos(a) * (RIM + 26), Math.sin(a) * (RIM + 26), 4, 0, Math.PI*2); L.fill(); }
-  // rubber surround + cone ridges (pump with the hits)
-  L.save(); L.scale(pulse, pulse);
-  L.globalAlpha = .12; L.lineWidth = 16; L.beginPath(); L.arc(0, 0, RIM - 2, 0, Math.PI*2); L.stroke();
-  L.lineWidth = 1.5; for (let rr = CAP + 6; rr < RIM - 12; rr += 9){ L.globalAlpha = .1 + (rr / RIM) * .12; L.beginPath(); L.arc(0, 0, rr, 0, Math.PI*2); L.stroke(); }
+  // green phosphor CRT look
+  const P = '"Pixelify Sans", monospace', BGC = "#020d06", GR = "#39ff8a", GD = "#168a45", WH = "#eafff2";
+  const t = performance.now() / 1000, pulse = 1 + G.pump * 0.04;
+  L.save();
+  L.shadowBlur = 0; L.globalAlpha = 1; L.setLineDash([]);
+  L.fillStyle = BGC; L.fillRect(0, 0, 640, LCD_H);
+  const glow = L.createRadialGradient(CX, CY, 10, CX, CY, 360);
+  glow.addColorStop(0, "rgba(57,255,138,.16)"); glow.addColorStop(1, "rgba(57,255,138,0)");
+  L.fillStyle = glow; L.fillRect(0, 0, 640, LCD_H);
+
+  // header + status
+  L.textBaseline = "middle"; L.shadowColor = GR; L.shadowBlur = 12;
+  L.fillStyle = GR; L.font = `700 28px ${P}`; L.textAlign = "center"; L.fillText("SYGNAL", 320, 30);
+  L.shadowBlur = 0; L.globalAlpha = .5; L.fillRect(16, 58, 608, 2); L.globalAlpha = 1;
+  L.font = `600 22px ${P}`; L.textAlign = "left"; L.fillStyle = WH; L.fillText(`Score ${G.score}`, 20, 78);
+  L.textAlign = "right"; L.fillStyle = GR; L.fillText(`Track ${G.level}`, 620, 78);
+  for (let k = 0; k < G.lives; k++){ const x = 22 + k * 26; for (let j = 0; j < 3; j++) L.fillRect(x + j * 6, 110 - (j + 1) * 5, 4, (j + 1) * 5); }
+
+  L.translate(CX, CY);
+  L.save(); L.beginPath(); L.rect(-CX, 62 - CY, 640, LCD_H); L.clip();   // keep effects under the header
+  // spinning effects live OUTSIDE the play area so the arena stays calm
+  const OUT0 = RIM + 34, OUT1 = 420;
+  L.lineWidth = 1.5;
+  for (let k = 0; k < 6; k++){
+    L.strokeStyle = GD; L.globalAlpha = .45; L.beginPath();
+    for (let rr = OUT0; rr <= OUT1; rr += 6){
+      const a = k * Math.PI / 3 + rr * 0.02 + t * 0.7;
+      const x = Math.cos(a) * rr, y = Math.sin(a) * rr;
+      rr === OUT0 ? L.moveTo(x, y) : L.lineTo(x, y);
+    }
+    L.stroke();
+  }
+  // radar sweep
+  const sw = t * 2.2;
+  for (let k = 0; k < 18; k++){
+    L.fillStyle = GR; L.globalAlpha = 0.12 * (1 - k / 18);
+    L.beginPath(); L.arc(0, 0, OUT1, sw - (k + 1) * 0.05, sw - k * 0.05); L.arc(0, 0, OUT0, sw - k * 0.05, sw - (k + 1) * 0.05, true); L.closePath(); L.fill();
+  }
+  L.globalAlpha = .9; L.strokeStyle = GR; L.lineWidth = 2;
+  L.beginPath(); L.moveTo(Math.cos(sw) * OUT0, Math.sin(sw) * OUT0); L.lineTo(Math.cos(sw) * OUT1, Math.sin(sw) * OUT1); L.stroke();
+  // counter-spinning dashed rings
+  L.setLineDash([6, 10]); L.lineWidth = 1.5; L.globalAlpha = .55; L.strokeStyle = GR;
+  L.lineDashOffset = t * 40;  L.beginPath(); L.arc(0, 0, RIM + 40, 0, Math.PI * 2); L.stroke();
+  L.lineDashOffset = -t * 30; L.beginPath(); L.arc(0, 0, RIM + 54, 0, Math.PI * 2); L.stroke();
+  L.setLineDash([]); L.lineDashOffset = 0;
+  // outer frame + rotating tick marks
+  L.globalAlpha = 1; L.shadowColor = GR; L.shadowBlur = 10; L.strokeStyle = GR; L.lineWidth = 2;
+  L.beginPath(); L.arc(0, 0, RIM + 14, 0, Math.PI * 2); L.stroke();
+  for (let k = 0; k < 48; k++){
+    const a = k / 48 * Math.PI * 2 - t * 0.25, r0 = RIM + 18, r1 = RIM + (k % 4 ? 23 : 30);
+    L.globalAlpha = k % 4 ? .5 : 1; L.beginPath(); L.moveTo(Math.cos(a) * r0, Math.sin(a) * r0); L.lineTo(Math.cos(a) * r1, Math.sin(a) * r1); L.stroke();
+  }
   L.globalAlpha = 1;
-  // bricks: ring segments
+
+  // spinning rings of bricks (pulse on hits)
+  L.save(); L.scale(pulse, pulse); L.rotate(G.rot);
   for (const br of G.bricks){
     if (br.hp <= 0) continue;
     const g = 0.035;
-    L.fillStyle = AMBER; L.globalAlpha = br.hp > 1 ? 1 : [.95, .75, .55][br.ring];
+    L.fillStyle = br.ring === 0 ? WH : GR; L.globalAlpha = br.hp > 1 ? 1 : [.95, .85, .6][br.ring];
+    L.shadowColor = GR; L.shadowBlur = 8;
     L.beginPath(); L.arc(0, 0, br.r1, br.a0 + g, br.a1 - g); L.arc(0, 0, br.r0, br.a1 - g, br.a0 + g, true); L.closePath(); L.fill();
-    if (br.hp > 1){ L.globalAlpha = 1; L.strokeStyle = LCD_BG; L.lineWidth = 2; L.beginPath(); L.arc(0, 0, (br.r0 + br.r1) / 2, br.a0 + .08, br.a1 - .08); L.stroke(); }
+    if (br.hp > 1){ L.shadowBlur = 0; L.globalAlpha = 1; L.strokeStyle = BGC; L.lineWidth = 3; L.beginPath(); L.arc(0, 0, (br.r0 + br.r1) / 2, br.a0 + .08, br.a1 - .08); L.stroke(); }
   }
   L.globalAlpha = 1;
-  // dust cap
-  L.fillStyle = AMBER; L.beginPath(); L.arc(0, 0, CAP, 0, Math.PI*2); L.fill();
-  L.fillStyle = LCD_BG; L.globalAlpha = .35; L.beginPath(); L.arc(-8, -9, CAP * .45, 0, Math.PI*2); L.fill(); L.globalAlpha = 1;
-  L.font = `700 16px ${P}`; L.textAlign = "center"; L.fillStyle = LCD_BG; L.fillText(STORE.artist, 0, 2);
+  // core
+  L.shadowBlur = 16; L.fillStyle = GR; L.beginPath(); L.arc(0, 0, CAP, 0, Math.PI * 2); L.fill();
+  L.shadowBlur = 0; L.strokeStyle = BGC; L.lineWidth = 2;
+  for (let k = 0; k < 3; k++){ L.beginPath(); L.arc(0, 0, CAP - 6 - k * 7, -t * 3 + k, -t * 3 + k + 2.2); L.stroke(); }
   L.restore();
-  // paddle on the rim
-  L.strokeStyle = AMBER; L.lineWidth = 12; L.lineCap = "round";
-  L.beginPath(); L.arc(0, 0, RIM - 4, G.ang - PAD_W, G.ang + PAD_W); L.stroke(); L.lineCap = "butt";
+  L.save(); L.rotate(-G.rot * 2); L.fillStyle = BGC; L.font = `700 15px ${P}`; L.textAlign = "center"; L.fillText(STORE.artist, 0, 1); L.restore();
+
+  // hit sparks
+  for (const h of G.hits){
+    L.strokeStyle = WH; L.globalAlpha = h.t * 2; L.lineWidth = 2; L.shadowColor = GR; L.shadowBlur = 10;
+    L.beginPath(); L.arc(h.x, h.y, 8 + (0.5 - h.t) * 50, 0, Math.PI * 2); L.stroke();
+  }
+  L.globalAlpha = 1;
+  // paddle: green glow with white core
+  L.lineCap = "round"; L.shadowColor = GR; L.shadowBlur = 18;
+  L.strokeStyle = GR; L.lineWidth = 14; L.beginPath(); L.arc(0, 0, RIM - 4, G.ang - PAD_W, G.ang + PAD_W); L.stroke();
+  L.strokeStyle = WH; L.lineWidth = 5; L.beginPath(); L.arc(0, 0, RIM - 4, G.ang - PAD_W + .03, G.ang + PAD_W - .03); L.stroke();
+  L.lineCap = "butt";
   // ball + trail
   if (G.state !== "over"){
-    L.fillStyle = AMBER;
-    G.trail.forEach(([x, y], k) => { L.globalAlpha = (k + 1) / G.trail.length * .25; L.beginPath(); L.arc(x, y, BALL * .7, 0, Math.PI*2); L.fill(); });
-    L.globalAlpha = 1; L.beginPath(); L.arc(G.bx, G.by, BALL, 0, Math.PI*2); L.fill();
-    L.fillStyle = LCD_BG; L.beginPath(); L.arc(G.bx, G.by, 2.5, 0, Math.PI*2); L.fill();
+    L.shadowBlur = 0;
+    G.trail.forEach(([x, y], k) => { L.fillStyle = GR; L.globalAlpha = (k + 1) / G.trail.length * .45; L.beginPath(); L.arc(x, y, BALL * .75, 0, Math.PI * 2); L.fill(); });
+    L.globalAlpha = 1; L.shadowColor = GR; L.shadowBlur = 16; L.fillStyle = WH;
+    L.beginPath(); L.arc(G.bx, G.by, BALL, 0, Math.PI * 2); L.fill();
   }
   L.restore();
-  if (G.flash > 0){ L.fillStyle = AMBER; L.globalAlpha = G.flash * .25; L.fillRect(0, 60, 640, LCD_H - 60); L.globalAlpha = 1; }
-  // status
-  L.font = `600 22px ${P}`; L.fillStyle = AMBER;
-  L.textAlign = "left"; L.fillText(`Score ${G.score}`, 20, 76);
-  L.textAlign = "right"; L.fillText(`Track ${G.level}`, 620, 76);
-  for (let k = 0; k < G.lives; k++){ const x = 24 + k * 20; L.beginPath(); L.arc(x, 100, 6, 0, Math.PI*2); L.stroke(); L.beginPath(); L.arc(x, 100, 2, 0, Math.PI*2); L.fill(); }
-  // overlays
+  L.setTransform(1, 0, 0, 1, 0, 0); L.shadowBlur = 0; L.globalAlpha = 1;
+
+  if (G.flash > 0){ L.fillStyle = GR; L.globalAlpha = G.flash * .25; L.fillRect(0, 60, 640, LCD_H - 60); L.globalAlpha = 1; }
+
+  // banners
   const banner = (big, small, small2) => {
     const hgt = small2 ? 128 : 100, y = 271;
-    L.fillStyle = LCD_BG; L.globalAlpha = .93; L.fillRect(50, y, 540, hgt); L.globalAlpha = 1;
-    L.strokeStyle = AMBER; L.lineWidth = 3; L.strokeRect(50.5, y + .5, 540, hgt);
-    L.fillStyle = AMBER; L.textAlign = "center"; L.font = `700 34px ${P}`; L.fillText(big, 320, y + 36);
-    L.font = `500 21px ${P}`; L.fillStyle = DIM; if (small) L.fillText(small, 320, y + 74); if (small2) L.fillText(small2, 320, y + 104);
+    L.fillStyle = "rgba(2,13,6,.92)"; L.fillRect(50, y, 540, hgt);
+    L.strokeStyle = GR; L.lineWidth = 3; L.shadowColor = GR; L.shadowBlur = 12; L.strokeRect(50.5, y + .5, 540, hgt);
+    L.fillStyle = GR; L.textAlign = "center"; L.font = `700 34px ${P}`; L.fillText(big, 320, y + 36);
+    L.shadowBlur = 0; L.font = `500 21px ${P}`; L.fillStyle = WH;
+    if (small) L.fillText(small, 320, y + 74); if (small2) L.fillText(small2, 320, y + 104);
   };
-  if (G.state === "ready" && G.msgT <= 0 && G.score === 0 && G.level === 1) banner("Woofer", "Turn the wheel to move. Center launches.", "Clear the cone to drop the track");
-  else if (G.state === "ready" && G.msgT <= 0){ L.textAlign = "center"; L.fillStyle = DIM; L.font = `500 20px ${P}`; L.fillText("Center to launch", 320, 104); }
+  if (G.state === "ready" && G.msgT <= 0 && G.score === 0 && G.level === 1) banner("SYGNAL", "Turn the wheel to move. Center launches.", "Break every ring to clear the track");
+  else if (G.state === "ready" && G.msgT <= 0){ L.textAlign = "center"; L.fillStyle = WH; L.font = `500 20px ${P}`; L.fillText("Center to launch", 320, 104); }
   else if (G.state === "paused") banner("Paused", "Center to keep playing");
-  else if (G.state === "over") banner("Speaker blown", `Score ${G.score}   Best ${G.best}`, "Center to run it back");
-  if (G.msgT > 0 && G.state !== "over"){ L.textAlign = "center"; L.fillStyle = AMBER; L.font = `700 26px ${P}`; L.fillText(G.msg, 320, 104); }
+  else if (G.state === "over") banner("Signal lost", `Score ${G.score}   Best ${G.best}`, "Center to run it back");
+  if (G.msgT > 0 && G.state !== "over"){ L.textAlign = "center"; L.fillStyle = GR; L.shadowColor = GR; L.shadowBlur = 12; L.font = `700 26px ${P}`; L.fillText(G.msg, 320, 104); L.shadowBlur = 0; }
+
+  // CRT: scanlines, vignette, flicker
+  L.fillStyle = "rgba(0,0,0,.28)"; for (let y = 0; y < LCD_H; y += 3) L.fillRect(0, y, 640, 1);
+  const vg = L.createRadialGradient(320, LCD_H / 2, 180, 320, LCD_H / 2, 430);
+  vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.6)");
+  L.fillStyle = vg; L.fillRect(0, 0, 640, LCD_H);
+  L.fillStyle = GR; L.globalAlpha = 0.015 + Math.random() * 0.02; L.fillRect(0, 0, 640, LCD_H);
+  L.globalAlpha = 1;
+  L.restore();
 }
 
 /* ---------- navigation ---------- */
