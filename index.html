@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#ffffff; --ink:#151515; --muted:#76726c; --line:#e6e3df; --soft:#f5f4f2; --amber:#2f6bff;
+  --bg:#ffffff; --ink:#151515; --muted:#66625c; --line:#e6e3df; --soft:#f5f4f2; --amber:#2f6bff;
   color-scheme:light;
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
@@ -57,9 +57,23 @@ header > *{pointer-events:auto}
 .lic:hover,.lic.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .lic.off{opacity:.5;cursor:not-allowed}
 .lic.off:hover{background:var(--soft);color:var(--ink);border-color:var(--line)}
-.lic small{font-size:11px;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lic small{font-size:11px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lic:disabled{cursor:not-allowed}
 
+.legal-line{grid-column:1/-1;margin:0;font-size:11px;line-height:1.4;color:var(--muted)}
+.legal-line button{font:inherit;color:inherit;background:none;border:0;padding:0;text-decoration:underline;cursor:pointer}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+#legal{width:min(640px,calc(100% - 24px));max-height:min(80vh,760px);padding:0;border:1px solid var(--line);border-radius:18px;background:var(--bg);color:var(--ink);overflow:hidden}
+#legal::backdrop{background:rgba(0,0,0,.45)}
+#legal .lg-head{display:flex;align-items:center;gap:6px;padding:12px 12px 10px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+#legal .lg-tab{font:inherit;font-size:13px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--soft);color:var(--ink);cursor:pointer}
+#legal .lg-tab[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+#legal .lg-close{margin-left:auto;font:inherit;font-size:13px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+#legal .lg-body{padding:6px 20px 22px;overflow:auto;max-height:calc(min(80vh,760px) - 60px);font-size:14px;line-height:1.55}
+#legal h3{font-size:18px;margin:16px 0 4px} #legal h4{font-size:14px;margin:16px 0 2px}
+#legal p{margin:6px 0} #legal .eff{color:var(--muted);font-size:12px}
+#legal a{color:inherit}
+#legal :focus-visible,.legal-line button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 #toast{position:fixed;left:50%;top:calc(80px + env(safe-area-inset-top,0px));transform:translate(-50%,-10px);opacity:0;
   background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;z-index:5;transition:opacity .25s,transform .25s;max-width:calc(100% - 32px)}
 #toast.show{opacity:1;transform:translate(-50%,0)}
@@ -83,7 +97,7 @@ header > *{pointer-events:auto}
 </style>
 </head>
 <body>
-<canvas id="stage" tabindex="0" aria-label="3D beat player. Drag to spin. Arrow keys scroll, Enter selects, Escape goes back, Space plays."></canvas>
+<canvas id="stage" tabindex="0" aria-label="3D beat player. Tap to lock in, drag to spin. Arrow keys scroll, Enter selects, Escape goes back, Space plays."></canvas>
 
 <header>
   <div class="brand"><img id="brandLogo" alt="PRIA"><span>Beat store</span></div>
@@ -93,16 +107,78 @@ header > *{pointer-events:auto}
   </div>
 </header>
 
-<p id="hint">Drag to spin it. Let go while it faces you and it locks in.</p>
+<p id="hint">Tap the pod to lock in. Drag to spin it.</p>
 
 <section id="card" aria-live="polite">
   <button id="cardPlay" type="button" aria-label="Play preview"></button>
   <div class="ttl"><h2 id="cardTitle">Loading</h2><p id="cardMeta"></p></div>
   <div id="lics"></div>
+  <p class="legal-line">Prices in USD. Any sales tax is shown at checkout before you pay. Checking out means you agree to the <button type="button" data-doc="terms">Terms &amp; License</button> and <button type="button" data-doc="refunds">Refund policy</button>. <button type="button" data-doc="privacy">Privacy</button>. © 2026 PRIA LLC.</p>
 </section>
+<p id="lcdSay" class="sr-only" aria-live="polite"></p>
 
 <div id="toast" role="status"></div>
 <div id="loading">Warming up the player</div>
+
+<dialog id="legal" aria-labelledby="lgTitle">
+  <div class="lg-head" role="tablist" aria-label="Store policies">
+    <button class="lg-tab" role="tab" data-doc="terms" aria-selected="true">Terms &amp; License</button>
+    <button class="lg-tab" role="tab" data-doc="refunds" aria-selected="false">Refunds</button>
+    <button class="lg-tab" role="tab" data-doc="privacy" aria-selected="false">Privacy</button>
+    <button class="lg-close" type="button" aria-label="Close policies">Close</button>
+  </div>
+  <div class="lg-body">
+    <section data-doc="terms">
+      <h3 id="lgTitle">Terms of Sale &amp; Beat License</h3>
+      <p class="eff">Effective October 16, 2026</p>
+      <p>This beat store is run by PRIA LLC, a California company. Questions: <a href="mailto:contact@prodpria.com">contact@prodpria.com</a>.</p>
+      <h4>What you get with a lease</h4>
+      <p>A non-exclusive license to use the beat you bought in your own songs and videos, including releases on streaming platforms and social media. You receive the untagged MP3 and WAV files.</p>
+      <h4>Your obligations</h4>
+      <p>Credit “prod. PRIA” on every release that uses the beat. Don't resell, share, or give away the beat files themselves, don't claim the beat as your own, and don't register the beat by itself with Content ID or similar systems. PRIA keeps the copyright in the beat, and the same beat may be leased to other artists.</p>
+      <h4>Exclusive rights</h4>
+      <p>Exclusive rights are only granted through a separate written agreement. Email us to make an offer.</p>
+      <h4>Previews</h4>
+      <p>The tagged previews on this site are for listening only and may not be used in any release.</p>
+      <h4>Prices and payment</h4>
+      <p>Prices are in US dollars: $45 per lease, or any 3 beats for $120, applied automatically. We don't add hidden fees. If sales tax applies, it is shown at checkout before you pay. Payments are processed securely by Stripe.</p>
+      <h4>Delivery</h4>
+      <p>Files are sent to the email you use at checkout, usually within 24 hours.</p>
+      <h4>Who can buy</h4>
+      <p>You must be 18 or older, or have permission from a parent or guardian, to make a purchase.</p>
+      <h4>Other terms</h4>
+      <p>Beats are provided as they are. To the extent the law allows, our total responsibility for any claim is limited to the amount you paid for the beat in question. These terms are governed by the laws of California. We may update these terms; the version shown when you buy applies to that purchase.</p>
+    </section>
+    <section data-doc="refunds" hidden>
+      <h3>Refund Policy</h3>
+      <p class="eff">Effective October 16, 2026</p>
+      <p>Because beats are digital files, sales are final once your files have been delivered.</p>
+      <p>You can get a full refund if your files weren't delivered within 72 hours of purchase, if you were charged twice for the same order, or if a file is broken and we can't send you a working copy.</p>
+      <p>To request a refund, email <a href="mailto:contact@prodpria.com">contact@prodpria.com</a> within 14 days of purchase with the email you used at checkout. Approved refunds go back to your original payment method through Stripe. Refunding a lease ends your license to use that beat.</p>
+    </section>
+    <section data-doc="privacy" hidden>
+      <h3>Privacy Policy</h3>
+      <p class="eff">Effective October 16, 2026</p>
+      <p>PRIA LLC runs this store. We collect as little as possible.</p>
+      <h4>No cookies or tracking</h4>
+      <p>This site doesn't use cookies, analytics, ads, or tracking. It saves a few settings in your browser's local storage so they stick between visits: light or dark mode, your cart, and your game high score. These never leave your device, and clearing your browser's site data removes them.</p>
+      <h4>When you buy</h4>
+      <p>Checkout happens on Stripe's secure page. Stripe collects your payment details, name, and email under its own privacy policy. We receive your name, email, and what you bought, but never your card number. We use this only to deliver your beats, provide support, and keep records required for taxes.</p>
+      <h4>When you email us</h4>
+      <p>If you email us about an order or an exclusive, we keep that conversation to handle your request.</p>
+      <h4>Services this site loads</h4>
+      <p>Like any website, these services receive your IP address and basic browser information when the page loads: GitHub Pages (hosting and the beat list), cdnjs by Cloudflare (the 3D player library), and Google Fonts (typefaces). Stripe is used only if you check out.</p>
+      <h4>Sharing</h4>
+      <p>We don't sell or share your personal information. We only use the services above to run the store.</p>
+      <h4>Your choices and deleting your data</h4>
+      <p>Email <a href="mailto:contact@prodpria.com">contact@prodpria.com</a> to see, correct, or delete the information we have about you. We'll respond within 30 days. We may keep records the law requires, such as tax records of payments.</p>
+      <h4>Children</h4>
+      <p>This store isn't directed at children under 13, and we don't knowingly collect their information. If you think a child has sent us information, contact us and we'll delete it.</p>
+      <h4>Changes</h4>
+      <p>If this policy changes, we'll update the date at the top.</p>
+    </section>
+  </div>
+</dialog>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -114,20 +190,24 @@ const STORE = {
   email: "contact@prodpria.com",      // where orders + exclusive offers go
   website: "https://www.prodpria.com",
 
-  // Your GitHub repository, like "yourname/beatpod". On a github.io link this
+  // Your GitHub repository, like "prodpria/pria.beat.store". On a github.io link this
   // is found automatically, so you only need it if you use your own domain.
   github: "",
-  instagram: "@pria",
+  instagram: "@prodpria",
 
   leasePrice: 45,                       // every beat lease costs this
-  deal: { count: 3, price: 99 },        // automatic deal: any 3 beats for $99
+  deal: { count: 3, price: 120 },       // automatic deal: any 3 beats for $120
 
   // Stripe Payment Links (optional). Make one link per cart size:
-  //   1 beat = $45, 2 beats = $90, 3 beats = $99
+  //   1 beat = $45, 2 beats = $90, 3 beats = $120
   // Leave them "" and checkout sends you an order email instead.
-  checkout: { 1: "", 2: "", 3: "" },
+  checkout: {
+    1: "https://buy.stripe.com/test_fZuaEXdj27Di7mvaRK9ws00",   // 1 beat  $45
+    2: "https://buy.stripe.com/test_5kQ4gz4Mw8HmayH9NG9ws01",   // 2 beats $90
+    3: "https://buy.stripe.com/test_7sY28r3Is0aQ5en1ha9ws02",   // 3-beat deal $120
+  },
 
-  licensing: "Lease ($45): MP3 + WAV, non-exclusive.\nAny 3 beats: $99, applied automatically.\nExclusive: full ownership. Contact for a price.\nCredit: prod. PRIA on every release."
+  licensing: "Lease ($45): MP3 + WAV, non-exclusive.\nAny 3 beats: $120, applied automatically.\nExclusive: full ownership. Contact for a price.\nCredit: prod. PRIA on every release."
 };
 
 /* ---------- YOUR BEATS ----------
@@ -137,14 +217,9 @@ const STORE = {
    Put  SOLD  in a file name to mark it sold, e.g.  Night Drive - 140 - B min - trap - SOLD.mp3
    Start names with 01, 02, 03... to choose the order.
 
-   The list below is only used when the folder has no MP3s yet (demo beats). */
+   The list below is only a backup, used if the beat list can't be read. */
 const BEATS = [
-  { title: "Ghost Signal",  bpm: 142, key: "F# min", tags: "dark trap", file: "beats/ghost-signal.mp3" },
-  { title: "Concrete Halo", bpm: 88,  key: "C min",  tags: "boom bap",  file: "beats/concrete-halo.mp3" },
-  { title: "Late Checkout", bpm: 150, key: "A min",  tags: "rage",      file: "beats/late-checkout.mp3" },
-  { title: "Low Orbit",     bpm: 132, key: "D min",  tags: "melodic",   file: "beats/low-orbit.mp3" },
-  { title: "Velvet Static", bpm: 96,  key: "G min",  tags: "r&b",       file: "beats/velvet-static.mp3" },
-  { title: "Nine Lives",    bpm: 160, key: "E min",  tags: "drill",     file: "beats/nine-lives.mp3" },
+  { title: "Crash Land", bpm: 159, key: "F# min", tags: "", file: "beats/Crash%20Land%20-%20159%20-%20F%23%20min.mp3" },
 ];
 /* ===================== end of store settings ===================== */
 
@@ -177,14 +252,21 @@ function parseBeatName(name){
 async function loadBeatsFolder(){
   let repo = (STORE.github || "").trim().replace(/^https?:\/\/github\.com\//, "").replace(/\/$/, "");
   const host = location.hostname.match(/^([^.]+)\.github\.io$/i);
-  if (!repo && host){ const first = location.pathname.split("/").filter(Boolean)[0]; repo = host[1] + "/" + (first && !first.includes(".") ? first : host[0]); }
+  if (!repo && host){ const first = location.pathname.split("/").filter(Boolean)[0]; repo = host[1] + "/" + (first && !/\.html?$/i.test(first) ? first : host[0]); }
   if (!repo) return;
   const cacheKey = "pria-beats:" + repo;
   let files = null;
-  try { const c = JSON.parse(sessionStorage.getItem(cacheKey) || "null"); if (c && Date.now() - c.t < 5 * 60e3) files = c.files; } catch(e) {}
+  try { const c = JSON.parse(sessionStorage.getItem(cacheKey) || "null"); if (c && Date.now() - c.t < 30e3) files = c.files; } catch(e) {}
+  if (!files && host && !STORE.github){
+    // 1st choice: beats/list.json kept up to date by the GitHub Action (no limits, works on cell data)
+    try {
+      const res = await fetch("beats/list.json?t=" + Date.now(), { cache: "no-store" });
+      if (res.ok){ const names = await res.json(); if (Array.isArray(names) && names.length) files = names.map(n => ({ name: n, url: "beats/" + encodeURIComponent(n) })); }
+    } catch(e) {}
+  }
   if (!files){
     const ctl = new AbortController(); setTimeout(() => ctl.abort(), 4000);
-    const res = await fetch(`https://api.github.com/repos/${repo}/contents/beats`, { signal: ctl.signal });
+    const res = await fetch(`https://api.github.com/repos/${repo}/contents/beats?t=${Date.now()}`, { signal: ctl.signal, cache: "no-store" });
     if (!res.ok) return;
     files = (await res.json()).filter(f => f.type === "file" && /\.(mp3|wav|m4a|ogg)$/i.test(f.name)).map(f => ({ name: f.name, url: f.download_url }));
     try { sessionStorage.setItem(cacheKey, JSON.stringify({ t: Date.now(), files })); } catch(e) {}
@@ -418,8 +500,6 @@ buildFront(isDark);
     rg.font = font; rg.textAlign = align; rg.fillStyle = "rgb(175,175,175)"; rg.fillText(txt, x, y);
     bg.font = font; bg.textAlign = align; bg.fillStyle = "#303030"; bg.fillText(txt, x, y);
   };
-  const cy = ly + lh + 70;
-  engrave("beatpod", '800 44px "Archivo", sans-serif', FCW/2, cy);
   // box with beat count
   const bw = 150, bh = 50, bx = (FCW - bw)/2, by = FCH * 0.74;
   for (const [d, col] of [[-1, "rgba(0,0,0,.9)"], [1, "#aeaba6"], [0, "#8a8783"]]){
@@ -536,7 +616,8 @@ function items(s){
       { label: "Licensing", right: "›", go: () => push("text", { title: "Licensing", body: STORE.licensing }) },
       { label: "Contact", right: "›", go: () => push("text", { title: "Contact", body: STORE.contact }) },
       { label: "prodpria.com", right: "›", go: () => openLink(STORE.website, "Opening prodpria.com") },
-      { label: "Woofer", right: "play", go: () => { gameReset(); push("game"); } }
+      { label: "Terms & privacy", right: "›", go: () => openLegal("terms") },
+      { label: "Sygnal", right: "play", go: () => { gameReset(); push("game"); } }
     ];
     case "beats": return BEATS.map((b, i) => ({ label: b.title, right: b.sold ? "sold" : inCart(i) ? "added" : b.bpm + "", go: () => push("beat", { i }) }));
     case "beat": {
@@ -574,7 +655,7 @@ function drawLCD(){
   L.fillStyle = AMBER; L.strokeStyle = AMBER; L.textBaseline = "middle";
 
   // header
-  const titles = { main: STORE.artist, beats: "Beats", beat: "Beat", cart: "Cart", game: "Woofer", now: "Now playing", text: s.title };
+  const titles = { main: STORE.artist, beats: "Beats", beat: "Beat", cart: "Cart", game: "Sygnal", now: "Now playing", text: s.title };
   L.font = '700 28px "Pixelify Sans", monospace'; L.textAlign = "center"; L.fillText(titles[s.id] || "", 320, 30);
   if (audio.playing >= 0){ L.beginPath(); L.moveTo(24, 20); L.lineTo(42, 30); L.lineTo(24, 40); L.fill(); }
   L.lineWidth = 2; L.strokeRect(574, 20, 40, 20); L.fillRect(615, 26, 4, 8); L.fillRect(578, 24, 26, 12);
@@ -652,14 +733,14 @@ function drawLCD(){
   lcdTex.needsUpdate = true;
 }
 
-/* ---------- Woofer: circular brick-breaker inside a speaker cone ----------
+/* ---------- Sygnal: circular brick-breaker on a green CRT, rings spin ----------
    Turn the wheel to slide the surround paddle around the rim.
    Center launches / pauses. Knock out every ring of the cone.
    Outer ring = hi-hats, middle = snares, inner = keys, paddle = kick,
    the dust cap in the middle drops an 808. */
 const G = { state: "ready", score: 0, best: 0, lives: 5, level: 1, ang: -Math.PI/2, tang: -Math.PI/2,
-  bx: 0, by: 0, vx: 0, vy: 0, bricks: [], msg: "", msgT: 0, flash: 0, pump: 0, combo: 0, trail: [] };
-try { G.best = +localStorage.getItem("pria-woofer-best") || 0; } catch(e) {}
+  bx: 0, by: 0, vx: 0, vy: 0, bricks: [], msg: "", msgT: 0, flash: 0, pump: 0, combo: 0, trail: [], rot: 0, hits: [] };
+try { G.best = +localStorage.getItem("pria-sygnal-best") || 0; } catch(e) {}
 const CX = 320, CY = 323, RIM = 178, PAD_W = 0.5, BALL = 8, CAP = 30;
 const RINGS = [ { r0: 42, r1: 64, n: 10 }, { r0: 70, r1: 92, n: 14 }, { r0: 98, r1: 120, n: 18 } ];
 const angDiff = (a, b) => { let d = (a - b) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; return d; };
@@ -710,6 +791,8 @@ function gameUpdate(dt){
   if (G.msgT > 0) G.msgT -= dt;
   G.flash = Math.max(0, G.flash - dt * 3); G.pump = Math.max(0, G.pump - dt * 5);
   G.ang += angDiff(G.tang, G.ang) * Math.min(1, dt * 14);
+  if (G.state !== "paused" && G.state !== "over") G.rot += dt * (0.22 + 0.06 * (G.level - 1)) * (G.level % 2 ? 1 : -1);
+  G.hits = G.hits.filter(h => (h.t -= dt) > 0);
   if (G.state === "clear"){ if (G.msgT <= 0){ G.level++; gameLevel(); } return; }
   if (G.state === "ready"){ const rr = RIM - 16; G.bx = Math.cos(G.ang) * rr; G.by = Math.sin(G.ang) * rr; return; }
   if (G.state !== "play") return;
@@ -728,14 +811,14 @@ function gameUpdate(dt){
     // cone rings: drums
     for (const br of G.bricks){
       if (br.hp <= 0 || r < br.r0 - BALL || r > br.r1 + BALL) continue;
-      const mid = (br.a0 + br.a1) / 2, half = (br.a1 - br.a0) / 2, da = angDiff(th, mid);
+      const mid = (br.a0 + br.a1) / 2 + G.rot, half = (br.a1 - br.a0) / 2, da = angDiff(th, mid);
       if (Math.abs(da) > half + BALL / r) continue;
       const radPen = Math.min(r + BALL - br.r0, br.r1 - (r - BALL)), angPen = (half + BALL / r - Math.abs(da)) * r;
       if (radPen < angPen) bounceRadial(nx, ny);
       else { const tx = -ny * Math.sign(da), ty = nx * Math.sign(da); const d = G.vx * tx + G.vy * ty; if (d < 0){ G.vx -= 2 * d * tx; G.vy -= 2 * d * ty; } }
-      br.hp--; G.combo++; G.score += 10 * G.combo; G.pump = .6;
+      br.hp--; G.combo++; G.score += 10 * G.combo; G.pump = .6; G.hits.push({ x: G.bx, y: G.by, t: .5 });
       sfx(br.ring === 2 ? "hat" : br.ring === 1 ? "snare" : "keys", br.k);
-      if (G.combo === 6) gameMsg("Hype!"); else if (G.combo === 12) gameMsg("Speaker's blown!");
+      if (G.combo === 6) gameMsg("Locked on!"); else if (G.combo === 12) gameMsg("Full signal!");
       break;
     }
     G.trail.push([G.bx, G.by]); if (G.trail.length > 10) G.trail.shift();
@@ -743,69 +826,132 @@ function gameUpdate(dt){
       G.lives--; G.combo = 0; G.flash = 1; sfx("scratch");
       if (G.lives <= 0){
         G.state = "over";
-        if (G.score > G.best){ G.best = G.score; try { localStorage.setItem("pria-woofer-best", String(G.best)); } catch(e) {} }
-      } else { G.state = "ready"; G.vx = G.vy = 0; G.trail = []; gameMsg("Missed it", 0.9); }
+        if (G.score > G.best){ G.best = G.score; try { localStorage.setItem("pria-sygnal-best", String(G.best)); } catch(e) {} }
+      } else { G.state = "ready"; G.vx = G.vy = 0; G.trail = []; gameMsg("Signal dropped", 0.9); }
       return;
     }
     if (!G.bricks.some(b => b.hp > 0)){ G.state = "clear"; G.vx = G.vy = 0; gameMsg(`Track ${G.level} complete`, 1.8); sfx("clear"); return; }
   }
 }
 function drawGame(){
-  const P = '"Pixelify Sans", monospace', pulse = 1 + G.pump * 0.035;
-  L.shadowBlur = 0;
-  L.save(); L.translate(CX, CY);
-  // speaker basket + screws
-  L.strokeStyle = AMBER; L.lineWidth = 3; L.beginPath(); L.arc(0, 0, RIM + 14, 0, Math.PI*2); L.stroke();
-  L.fillStyle = AMBER; for (let k = 0; k < 8; k++){ const a = k / 8 * Math.PI * 2 + Math.PI / 8; L.beginPath(); L.arc(Math.cos(a) * (RIM + 26), Math.sin(a) * (RIM + 26), 4, 0, Math.PI*2); L.fill(); }
-  // rubber surround + cone ridges (pump with the hits)
-  L.save(); L.scale(pulse, pulse);
-  L.globalAlpha = .12; L.lineWidth = 16; L.beginPath(); L.arc(0, 0, RIM - 2, 0, Math.PI*2); L.stroke();
-  L.lineWidth = 1.5; for (let rr = CAP + 6; rr < RIM - 12; rr += 9){ L.globalAlpha = .1 + (rr / RIM) * .12; L.beginPath(); L.arc(0, 0, rr, 0, Math.PI*2); L.stroke(); }
+  // green phosphor CRT look
+  const P = '"Pixelify Sans", monospace', BGC = "#020d06", GR = "#39ff8a", GD = "#168a45", WH = "#eafff2";
+  const t = performance.now() / 1000, pulse = 1 + G.pump * 0.04;
+  L.save();
+  L.shadowBlur = 0; L.globalAlpha = 1; L.setLineDash([]);
+  L.fillStyle = BGC; L.fillRect(0, 0, 640, LCD_H);
+  const glow = L.createRadialGradient(CX, CY, 10, CX, CY, 360);
+  glow.addColorStop(0, "rgba(57,255,138,.16)"); glow.addColorStop(1, "rgba(57,255,138,0)");
+  L.fillStyle = glow; L.fillRect(0, 0, 640, LCD_H);
+
+  // header + status
+  L.textBaseline = "middle"; L.shadowColor = GR; L.shadowBlur = 12;
+  L.fillStyle = GR; L.font = `700 28px ${P}`; L.textAlign = "center"; L.fillText("SYGNAL", 320, 30);
+  L.shadowBlur = 0; L.globalAlpha = .5; L.fillRect(16, 58, 608, 2); L.globalAlpha = 1;
+  L.font = `600 22px ${P}`; L.textAlign = "left"; L.fillStyle = WH; L.fillText(`Score ${G.score}`, 20, 78);
+  L.textAlign = "right"; L.fillStyle = GR; L.fillText(`Track ${G.level}`, 620, 78);
+  for (let k = 0; k < G.lives; k++){ const x = 22 + k * 26; for (let j = 0; j < 3; j++) L.fillRect(x + j * 6, 110 - (j + 1) * 5, 4, (j + 1) * 5); }
+
+  L.translate(CX, CY);
+  L.save(); L.beginPath(); L.rect(-CX, 62 - CY, 640, LCD_H); L.clip();   // keep effects under the header
+  // spinning effects live OUTSIDE the play area so the arena stays calm
+  const OUT0 = RIM + 34, OUT1 = 420;
+  L.lineWidth = 1.5;
+  for (let k = 0; k < 6; k++){
+    L.strokeStyle = GD; L.globalAlpha = .45; L.beginPath();
+    for (let rr = OUT0; rr <= OUT1; rr += 6){
+      const a = k * Math.PI / 3 + rr * 0.02 + t * 0.7;
+      const x = Math.cos(a) * rr, y = Math.sin(a) * rr;
+      rr === OUT0 ? L.moveTo(x, y) : L.lineTo(x, y);
+    }
+    L.stroke();
+  }
+  // radar sweep
+  const sw = t * 2.2;
+  for (let k = 0; k < 18; k++){
+    L.fillStyle = GR; L.globalAlpha = 0.12 * (1 - k / 18);
+    L.beginPath(); L.arc(0, 0, OUT1, sw - (k + 1) * 0.05, sw - k * 0.05); L.arc(0, 0, OUT0, sw - k * 0.05, sw - (k + 1) * 0.05, true); L.closePath(); L.fill();
+  }
+  L.globalAlpha = .9; L.strokeStyle = GR; L.lineWidth = 2;
+  L.beginPath(); L.moveTo(Math.cos(sw) * OUT0, Math.sin(sw) * OUT0); L.lineTo(Math.cos(sw) * OUT1, Math.sin(sw) * OUT1); L.stroke();
+  // counter-spinning dashed rings
+  L.setLineDash([6, 10]); L.lineWidth = 1.5; L.globalAlpha = .55; L.strokeStyle = GR;
+  L.lineDashOffset = t * 40;  L.beginPath(); L.arc(0, 0, RIM + 40, 0, Math.PI * 2); L.stroke();
+  L.lineDashOffset = -t * 30; L.beginPath(); L.arc(0, 0, RIM + 54, 0, Math.PI * 2); L.stroke();
+  L.setLineDash([]); L.lineDashOffset = 0;
+  // outer frame + rotating tick marks
+  L.globalAlpha = 1; L.shadowColor = GR; L.shadowBlur = 10; L.strokeStyle = GR; L.lineWidth = 2;
+  L.beginPath(); L.arc(0, 0, RIM + 14, 0, Math.PI * 2); L.stroke();
+  for (let k = 0; k < 48; k++){
+    const a = k / 48 * Math.PI * 2 - t * 0.25, r0 = RIM + 18, r1 = RIM + (k % 4 ? 23 : 30);
+    L.globalAlpha = k % 4 ? .5 : 1; L.beginPath(); L.moveTo(Math.cos(a) * r0, Math.sin(a) * r0); L.lineTo(Math.cos(a) * r1, Math.sin(a) * r1); L.stroke();
+  }
   L.globalAlpha = 1;
-  // bricks: ring segments
+
+  // spinning rings of bricks (pulse on hits)
+  L.save(); L.scale(pulse, pulse); L.rotate(G.rot);
   for (const br of G.bricks){
     if (br.hp <= 0) continue;
     const g = 0.035;
-    L.fillStyle = AMBER; L.globalAlpha = br.hp > 1 ? 1 : [.95, .75, .55][br.ring];
+    L.fillStyle = br.ring === 0 ? WH : GR; L.globalAlpha = br.hp > 1 ? 1 : [.95, .85, .6][br.ring];
+    L.shadowColor = GR; L.shadowBlur = 8;
     L.beginPath(); L.arc(0, 0, br.r1, br.a0 + g, br.a1 - g); L.arc(0, 0, br.r0, br.a1 - g, br.a0 + g, true); L.closePath(); L.fill();
-    if (br.hp > 1){ L.globalAlpha = 1; L.strokeStyle = LCD_BG; L.lineWidth = 2; L.beginPath(); L.arc(0, 0, (br.r0 + br.r1) / 2, br.a0 + .08, br.a1 - .08); L.stroke(); }
+    if (br.hp > 1){ L.shadowBlur = 0; L.globalAlpha = 1; L.strokeStyle = BGC; L.lineWidth = 3; L.beginPath(); L.arc(0, 0, (br.r0 + br.r1) / 2, br.a0 + .08, br.a1 - .08); L.stroke(); }
   }
   L.globalAlpha = 1;
-  // dust cap
-  L.fillStyle = AMBER; L.beginPath(); L.arc(0, 0, CAP, 0, Math.PI*2); L.fill();
-  L.fillStyle = LCD_BG; L.globalAlpha = .35; L.beginPath(); L.arc(-8, -9, CAP * .45, 0, Math.PI*2); L.fill(); L.globalAlpha = 1;
-  L.font = `700 16px ${P}`; L.textAlign = "center"; L.fillStyle = LCD_BG; L.fillText(STORE.artist, 0, 2);
+  // core
+  L.shadowBlur = 16; L.fillStyle = GR; L.beginPath(); L.arc(0, 0, CAP, 0, Math.PI * 2); L.fill();
+  L.shadowBlur = 0; L.strokeStyle = BGC; L.lineWidth = 2;
+  for (let k = 0; k < 3; k++){ L.beginPath(); L.arc(0, 0, CAP - 6 - k * 7, -t * 3 + k, -t * 3 + k + 2.2); L.stroke(); }
   L.restore();
-  // paddle on the rim
-  L.strokeStyle = AMBER; L.lineWidth = 12; L.lineCap = "round";
-  L.beginPath(); L.arc(0, 0, RIM - 4, G.ang - PAD_W, G.ang + PAD_W); L.stroke(); L.lineCap = "butt";
+  L.save(); L.rotate(-G.rot * 2); L.fillStyle = BGC; L.font = `700 15px ${P}`; L.textAlign = "center"; L.fillText(STORE.artist, 0, 1); L.restore();
+
+  // hit sparks
+  for (const h of G.hits){
+    L.strokeStyle = WH; L.globalAlpha = h.t * 2; L.lineWidth = 2; L.shadowColor = GR; L.shadowBlur = 10;
+    L.beginPath(); L.arc(h.x, h.y, 8 + (0.5 - h.t) * 50, 0, Math.PI * 2); L.stroke();
+  }
+  L.globalAlpha = 1;
+  // paddle: green glow with white core
+  L.lineCap = "round"; L.shadowColor = GR; L.shadowBlur = 18;
+  L.strokeStyle = GR; L.lineWidth = 14; L.beginPath(); L.arc(0, 0, RIM - 4, G.ang - PAD_W, G.ang + PAD_W); L.stroke();
+  L.strokeStyle = WH; L.lineWidth = 5; L.beginPath(); L.arc(0, 0, RIM - 4, G.ang - PAD_W + .03, G.ang + PAD_W - .03); L.stroke();
+  L.lineCap = "butt";
   // ball + trail
   if (G.state !== "over"){
-    L.fillStyle = AMBER;
-    G.trail.forEach(([x, y], k) => { L.globalAlpha = (k + 1) / G.trail.length * .25; L.beginPath(); L.arc(x, y, BALL * .7, 0, Math.PI*2); L.fill(); });
-    L.globalAlpha = 1; L.beginPath(); L.arc(G.bx, G.by, BALL, 0, Math.PI*2); L.fill();
-    L.fillStyle = LCD_BG; L.beginPath(); L.arc(G.bx, G.by, 2.5, 0, Math.PI*2); L.fill();
+    L.shadowBlur = 0;
+    G.trail.forEach(([x, y], k) => { L.fillStyle = GR; L.globalAlpha = (k + 1) / G.trail.length * .45; L.beginPath(); L.arc(x, y, BALL * .75, 0, Math.PI * 2); L.fill(); });
+    L.globalAlpha = 1; L.shadowColor = GR; L.shadowBlur = 16; L.fillStyle = WH;
+    L.beginPath(); L.arc(G.bx, G.by, BALL, 0, Math.PI * 2); L.fill();
   }
   L.restore();
-  if (G.flash > 0){ L.fillStyle = AMBER; L.globalAlpha = G.flash * .25; L.fillRect(0, 60, 640, LCD_H - 60); L.globalAlpha = 1; }
-  // status
-  L.font = `600 22px ${P}`; L.fillStyle = AMBER;
-  L.textAlign = "left"; L.fillText(`Score ${G.score}`, 20, 76);
-  L.textAlign = "right"; L.fillText(`Track ${G.level}`, 620, 76);
-  for (let k = 0; k < G.lives; k++){ const x = 24 + k * 20; L.beginPath(); L.arc(x, 100, 6, 0, Math.PI*2); L.stroke(); L.beginPath(); L.arc(x, 100, 2, 0, Math.PI*2); L.fill(); }
-  // overlays
+  L.setTransform(1, 0, 0, 1, 0, 0); L.shadowBlur = 0; L.globalAlpha = 1;
+
+  if (G.flash > 0){ L.fillStyle = GR; L.globalAlpha = G.flash * .25; L.fillRect(0, 60, 640, LCD_H - 60); L.globalAlpha = 1; }
+
+  // banners
   const banner = (big, small, small2) => {
     const hgt = small2 ? 128 : 100, y = 271;
-    L.fillStyle = LCD_BG; L.globalAlpha = .93; L.fillRect(50, y, 540, hgt); L.globalAlpha = 1;
-    L.strokeStyle = AMBER; L.lineWidth = 3; L.strokeRect(50.5, y + .5, 540, hgt);
-    L.fillStyle = AMBER; L.textAlign = "center"; L.font = `700 34px ${P}`; L.fillText(big, 320, y + 36);
-    L.font = `500 21px ${P}`; L.fillStyle = DIM; if (small) L.fillText(small, 320, y + 74); if (small2) L.fillText(small2, 320, y + 104);
+    L.fillStyle = "rgba(2,13,6,.92)"; L.fillRect(50, y, 540, hgt);
+    L.strokeStyle = GR; L.lineWidth = 3; L.shadowColor = GR; L.shadowBlur = 12; L.strokeRect(50.5, y + .5, 540, hgt);
+    L.fillStyle = GR; L.textAlign = "center"; L.font = `700 34px ${P}`; L.fillText(big, 320, y + 36);
+    L.shadowBlur = 0; L.font = `500 21px ${P}`; L.fillStyle = WH;
+    if (small) L.fillText(small, 320, y + 74); if (small2) L.fillText(small2, 320, y + 104);
   };
-  if (G.state === "ready" && G.msgT <= 0 && G.score === 0 && G.level === 1) banner("Woofer", "Turn the wheel to move. Center launches.", "Clear the cone to drop the track");
-  else if (G.state === "ready" && G.msgT <= 0){ L.textAlign = "center"; L.fillStyle = DIM; L.font = `500 20px ${P}`; L.fillText("Center to launch", 320, 104); }
+  if (G.state === "ready" && G.msgT <= 0 && G.score === 0 && G.level === 1) banner("SYGNAL", "Turn the wheel to move. Center launches.", "Break every ring to clear the track");
+  else if (G.state === "ready" && G.msgT <= 0){ L.textAlign = "center"; L.fillStyle = WH; L.font = `500 20px ${P}`; L.fillText("Center to launch", 320, 104); }
   else if (G.state === "paused") banner("Paused", "Center to keep playing");
-  else if (G.state === "over") banner("Speaker blown", `Score ${G.score}   Best ${G.best}`, "Center to run it back");
-  if (G.msgT > 0 && G.state !== "over"){ L.textAlign = "center"; L.fillStyle = AMBER; L.font = `700 26px ${P}`; L.fillText(G.msg, 320, 104); }
+  else if (G.state === "over") banner("Signal lost", `Score ${G.score}   Best ${G.best}`, "Center to run it back");
+  if (G.msgT > 0 && G.state !== "over"){ L.textAlign = "center"; L.fillStyle = GR; L.shadowColor = GR; L.shadowBlur = 12; L.font = `700 26px ${P}`; L.fillText(G.msg, 320, 104); L.shadowBlur = 0; }
+
+  // CRT: scanlines, vignette, flicker
+  L.fillStyle = "rgba(0,0,0,.28)"; for (let y = 0; y < LCD_H; y += 3) L.fillRect(0, y, 640, 1);
+  const vg = L.createRadialGradient(320, LCD_H / 2, 180, 320, LCD_H / 2, 430);
+  vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.6)");
+  L.fillStyle = vg; L.fillRect(0, 0, 640, LCD_H);
+  L.fillStyle = GR; L.globalAlpha = 0.015 + Math.random() * 0.02; L.fillRect(0, 0, 640, LCD_H);
+  L.globalAlpha = 1;
+  L.restore();
 }
 
 /* ---------- navigation ---------- */
@@ -824,7 +970,14 @@ function select(){
   const it = items(s)[s.sel]; if (it && it.go) it.go();
   drawLCD();
 }
-function onNav(){ drawLCD(); syncCard(); }
+function onNav(){ drawLCD(); syncCard(); announceLCD(); }
+let lastSay = "";
+function announceLCD(){
+  const s = cur(); const list = items(s); const it = list[s.sel];
+  const title = ({ main: STORE.artist, beats: "Beats", beat: "Beat", cart: "Cart", game: "Sygnal", now: "Now playing" })[s.id] || s.title || "";
+  const say = it ? `${title}: ${it.label}${it.right && it.right !== "›" ? ", " + it.right : ""}. ${s.sel + 1} of ${list.length}.` : title;
+  if (say !== lastSay){ lastSay = say; const el = document.getElementById("lcdSay"); if (el) el.textContent = say; }
+}
 
 /* ---------- cart + checkout ---------- */
 function toggleCart(i){
@@ -1097,10 +1250,10 @@ function setLockUI(){
   $("#lockBtn span").textContent = on ? "Locked in. Release" : "Lock in";
   canvas.classList.toggle("locked", on);
   $("#hint").textContent = on ? "Turn the knob to scroll. Press the center to select."
-                              : "Drag to spin it. Let go while it faces you and it locks in.";
+                              : "Tap the pod to lock in. Drag to spin it.";
 }
 function lockIn(){ if (mode !== "free") return; mode = "locking"; vel.x = vel.y = 0; setLockUI(); }
-function release(kick = true){ mode = "free"; userSpun = false; lastInput = performance.now(); if (kick) vel.y = 0.09; setLockUI(); }
+function release(kick = true){ mode = "free"; userSpun = false; lastInput = performance.now(); if (kick) vel.y = 0.03; setLockUI(); }
 function applyTheme(dark){
   isDark = dark;
   document.documentElement.dataset.theme = dark ? "dark" : "light";
@@ -1121,6 +1274,17 @@ function applyTheme(dark){
 }
 applyTheme(isDark);
 $("#themeBtn").addEventListener("click", () => applyTheme(!isDark));
+function openLegal(doc){
+  const d = $("#legal");
+  d.querySelectorAll(".lg-tab").forEach(t => t.setAttribute("aria-selected", String(t.dataset.doc === doc)));
+  d.querySelectorAll(".lg-body section").forEach(sec => sec.hidden = sec.dataset.doc !== doc);
+  d.querySelector(".lg-body").scrollTop = 0;
+  if (!d.open){ if (d.showModal) d.showModal(); else d.setAttribute("open", ""); }
+  d.querySelector(`.lg-tab[data-doc="${doc}"]`).focus();
+}
+document.querySelectorAll("[data-doc]").forEach(b => { if (b.tagName === "BUTTON") b.addEventListener("click", () => openLegal(b.dataset.doc)); });
+$("#legal .lg-close").addEventListener("click", () => { const d = $("#legal"); d.close ? d.close() : d.removeAttribute("open"); canvas.focus({ preventScroll: true }); });
+$("#legal").addEventListener("click", e => { if (e.target === $("#legal")) $("#legal .lg-close").click(); });
 $("#lockBtn").addEventListener("click", () => { mode === "free" ? lockIn() : release(); canvas.focus({ preventScroll: true }); });
 
 canvas.addEventListener("pointerdown", e => {
@@ -1153,10 +1317,16 @@ canvas.addEventListener("pointermove", e => {
     while (drag.acc < -STEP){ drag.acc += STEP; scroll(-1); }
   }
 });
-const endDrag = e => { if (!drag || e.pointerId !== drag.id) return; canvas.classList.remove("grabbing"); drag = null; lastInput = performance.now(); };
+const endDrag = e => {
+  if (!drag || e.pointerId !== drag.id) return;
+  const tap = e.type === "pointerup" && Math.hypot(e.clientX - drag.sx, e.clientY - drag.sy) < 8;
+  canvas.classList.remove("grabbing");
+  if (tap && mode === "free" && pick(e)) lockIn();          // tap the pod: it turns to face you and locks in
+  drag = null; lastInput = performance.now();
+};
 canvas.addEventListener("pointerup", endDrag);
 canvas.addEventListener("pointercancel", endDrag);
-canvas.addEventListener("dblclick", () => { mode === "free" ? lockIn() : release(); });
+
 canvas.addEventListener("wheel", e => {
   if (mode !== "locked") return;
   e.preventDefault(); wheelAcc += e.deltaY;
@@ -1165,6 +1335,7 @@ canvas.addEventListener("wheel", e => {
 }, { passive: false });
 let wheelAcc = 0;
 window.addEventListener("keydown", e => {
+  if ($("#legal").open) return;   // policies open: keys belong to the dialog
   if (e.target.closest && e.target.closest("a,button") && (e.key === "Enter" || e.key === " ")) return;
   const k = e.key;
   if (k === "l" || k === "L"){ mode === "free" ? lockIn() : release(); return; }
@@ -1238,9 +1409,13 @@ let tiltX = 0, tiltY = 0;
 addEventListener("pointermove", e => { tiltX = (e.clientX / innerWidth - .5) * 2; tiltY = (e.clientY / innerHeight - .5) * 2; });
 
 /* ---------- start ---------- */
-dev.quaternion.setFromEuler(new THREE.Euler(0.15, Math.PI * 0.85, 0.05));
+dev.quaternion.setFromEuler(new THREE.Euler(0.08, -0.55, 0));
+// start centered and turning slowly; tap the pod to lock it in
+lastInput = 0; if (!reduceMotion) vel.y = 0.006;
 drawLCD(); syncCard(); setLockUI(); resize();
+try { renderer.compile(scene, camera); renderer.render(scene, camera); } catch(e) {}
 $("#loading").style.opacity = 0; setTimeout(() => $("#loading").remove(), 600);
+last = performance.now();
 requestAnimationFrame(frame);
 })();
 </script>
