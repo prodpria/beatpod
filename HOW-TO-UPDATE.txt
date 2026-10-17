@@ -1,0 +1,31 @@
+PRIA BEAT STORE - HOW TO UPDATE
+Store: https://prodpria.github.io/pria.beat.store/
+Repo:  https://github.com/prodpria/pria.beat.store
+
+ADD A BEAT (VS Code)
+1. Name the MP3 like this:  Night Drive - 140 - B min - trap.mp3
+   (title - BPM - key - style). Style is optional.
+   To rename in VS Code: right-click the file > Rename (or click it and
+   press Enter), type the new name, press Enter.
+2. Drag the MP3 into the "beats" folder in VS Code's left sidebar.
+3. Click Source Control (branch icon, left bar) > type "new beat" >
+   Commit > Sync Changes.
+4. Wait 1-2 minutes. Refresh the store.
+
+IMPORTANT: a beat only goes live after Commit + Sync Changes.
+Check it worked: open the repo on github.com > beats folder. If the MP3
+isn't listed there, it never got uploaded.
+
+REMOVE OR SELL A BEAT
+- Remove: right-click the MP3 in VS Code > Delete > Commit > Sync.
+- Sold exclusive: rename it with " - SOLD" at the end, e.g.
+  Night Drive - 140 - B min - SOLD.mp3 > Commit > Sync.
+
+CHANGE PRICES / EMAIL / STRIPE LINKS
+index.html > near the top, the "YOUR STORE" section > edit > Commit > Sync.
+
+ONE-TIME SETUP CHECK (makes the beat list work on every phone)
+- The file .github/workflows/publish.yml must be in the repo.
+- github.com repo > Settings > Pages > Source must be "GitHub Actions".
+- After each Sync, the Actions tab shows a green check when the site
+  has finished updating.
