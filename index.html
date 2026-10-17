@@ -249,19 +249,27 @@ function parseBeatName(name){
   beat.tags = tags.join(", "); if (!beat.bpm) beat.bpm = 140; if (!beat.key) beat.key = "C min";
   return beat;
 }
+/* the store's own address, always ending in "/" (works even if the link is opened without the slash) */
+const SITE_BASE = (() => {
+  const host = location.hostname.match(/^([^.]+)\.github\.io$/i);
+  const first = location.pathname.split("/").filter(Boolean)[0];
+  if (host && first && !/\.html?$/i.test(first)) return `${location.origin}/${first}/`;
+  return new URL("./", location.href).href;
+})();
 async function loadBeatsFolder(){
   let repo = (STORE.github || "").trim().replace(/^https?:\/\/github\.com\//, "").replace(/\/$/, "");
   const host = location.hostname.match(/^([^.]+)\.github\.io$/i);
   if (!repo && host){ const first = location.pathname.split("/").filter(Boolean)[0]; repo = host[1] + "/" + (first && !/\.html?$/i.test(first) ? first : host[0]); }
   if (!repo) return;
+  STORE.repo = repo;
   const cacheKey = "pria-beats:" + repo;
   let files = null;
   try { const c = JSON.parse(sessionStorage.getItem(cacheKey) || "null"); if (c && Date.now() - c.t < 30e3) files = c.files; } catch(e) {}
   if (!files && host && !STORE.github){
     // 1st choice: beats/list.json kept up to date by the GitHub Action (no limits, works on cell data)
     try {
-      const res = await fetch("beats/list.json?t=" + Date.now(), { cache: "no-store" });
-      if (res.ok){ const names = await res.json(); if (Array.isArray(names) && names.length) files = names.map(n => ({ name: n, url: "beats/" + encodeURIComponent(n) })); }
+      const res = await fetch(SITE_BASE + "beats/list.json?t=" + Date.now(), { cache: "no-store" });
+      if (res.ok){ const names = await res.json(); if (Array.isArray(names) && names.length) files = names.map(n => ({ name: n })); }
     } catch(e) {}
   }
   if (!files){
@@ -274,11 +282,19 @@ async function loadBeatsFolder(){
   if (!files.length) return;
   files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
   const onSameSite = !!host && !STORE.github;
-  const list = files.map(f => Object.assign(parseBeatName(f.name), { preview: onSameSite ? "beats/" + encodeURIComponent(f.name) : f.url }));
+  const raw = n => `https://raw.githubusercontent.com/${repo}/main/beats/${encodeURIComponent(n)}`;
+  const list = files.map(f => Object.assign(parseBeatName(f.name), {
+    preview: onSameSite ? SITE_BASE + "beats/" + encodeURIComponent(f.name) : (f.url || raw(f.name)),
+    alt: raw(f.name)                                   // backup source if the site copy won't load
+  }));
   BEATS.splice(0, BEATS.length, ...list);
 }
 try { await loadBeatsFolder(); } catch(e) { /* keep the list in the file */ }
-BEATS.forEach(b => { if (!b.preview && b.file) b.preview = b.file; });
+BEATS.forEach(b => {
+  if (!b.preview && b.file) b.preview = b.file;
+  if (b.preview && !/^(https?:|data:|blob:|\/)/i.test(b.preview)) b.preview = SITE_BASE + b.preview;
+  if (!b.alt && STORE.repo && /\/beats\//.test(b.preview || "")) b.alt = `https://raw.githubusercontent.com/${STORE.repo}/main/beats/` + b.preview.split("/beats/")[1];
+});
 const slug = t => t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 let cart = [];
 try { cart = JSON.parse(localStorage.getItem("pria-cart") || "[]").filter(i => BEATS[i] && !BEATS[i].sold).slice(0, MAX_CART); } catch(e) { cart = []; }
@@ -1162,7 +1178,10 @@ function stop(){
 const bufCache = {};
 async function beatBytes(b){
   if (b.b64){ const bin = atob(b.b64), u = new Uint8Array(bin.length); for (let k = 0; k < bin.length; k++) u[k] = bin.charCodeAt(k); return u.buffer; }
-  const res = await fetch(b.preview); if (!res.ok) throw new Error("http " + res.status); return await res.arrayBuffer();
+  for (const url of [b.preview, b.alt].filter(Boolean)){
+    try { const res = await fetch(url); if (res.ok) return await res.arrayBuffer(); } catch(e) {}
+  }
+  throw new Error("couldn't download " + b.title);
 }
 function playFailed(i, b, blocked){
   if (audio.playing !== i) return;
@@ -1195,8 +1214,10 @@ function play(i){
     if (!b.preview){ playViaWebAudio(i, b, token); onNav(); return; }
     // plan A: normal audio player
     const el = audio.el = new Audio(); el.loop = true; el.preload = "auto"; el.playsInline = true; el.setAttribute("playsinline", "");
-    let switched = false;
-    const planB = () => { if (switched || audio.token !== token) return; switched = true; if (audio.el === el){ el.pause(); audio.el = null; } playViaWebAudio(i, b, token); };
+    let switched = false, usedAlt = false;
+    const planB = () => {
+      if (switched || audio.token !== token) return;
+      if (b.alt && !usedAlt && audio.el === el){ usedAlt = true; el.src = b.alt; el.play().catch(planB); return; } switched = true; if (audio.el === el){ el.pause(); audio.el = null; } playViaWebAudio(i, b, token); };
     el.addEventListener("error", planB);
     const guard = setTimeout(() => { if (audio.el === el && (el.paused || !el.currentTime) && el.readyState < 3) planB(); }, 4000);
     el.addEventListener("playing", () => clearTimeout(guard));
